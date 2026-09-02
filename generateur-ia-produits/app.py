@@ -76,3 +76,4 @@ if st.button("🚀 Générer la fiche produit"):
                 st.error(f"Les serveurs de l'IA subissent une forte demande. Veuillez cliquer à nouveau sur le bouton dans quelques secondes. (Détail : {e})")
     else:
         st.warning("Veuillez remplir tous les champs.")
+
