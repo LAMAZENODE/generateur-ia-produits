@@ -49,11 +49,12 @@ if st.button("🚀 Générer la fiche produit"):
             try:
                 prompt = f"Rédige une fiche produit e-commerce captivante pour : {nom_produit}. Caractéristiques : {caracteristiques}."
                 
-                # Correction majeure : Utilisation du modèle gemini-3.6-flash exigé par Google
+                               # Utilisation d'un modèle ultra-stable et disponible pour éviter la saturation
                 response = client.models.generate_content(
-                    model='gemini-3.6-flash',
+                    model='gemini-2.5-flash',
                     contents=prompt,
                 )
+
                 
                 # Affichage immédiat du texte sur l'écran
                 st.success("Généré avec succès !")
