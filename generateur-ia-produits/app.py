@@ -7,32 +7,16 @@ import stripe
 # ============================================
 # CONFIGURATION
 # ============================================
-st.set_page_config(page_title="Générateur IA Pro", page_icon="🛍️")
+st.set_page_config(page_title="Générateur de Fiches Produits", page_icon="🛍️")
 
 # Récupération des secrets
-try:
-    STRIPE_SECRET_KEY = st.secrets["STRIPE_SECRET_KEY"]
-    STRIPE_PRICE_ID = st.secrets["STRIPE_PRICE_ID"]
-    MON_URL_STREAMLIT = st.secrets["MON_URL_STREAMLIT"]
-    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-    
-    # Configuration Stripe
-    stripe.api_key = STRIPE_SECRET_KEY
-    
-    st.sidebar.success("✅ Stripe connecté")
-    st.sidebar.info(f"💰 Prix: {STRIPE_PRICE_ID}")
-    
-except KeyError as e:
-    st.error(f"❌ Secret manquant : {e}")
-    st.stop()
+STRIPE_SECRET_KEY = st.secrets["STRIPE_SECRET_KEY"]
+STRIPE_PRICE_ID = st.secrets["STRIPE_PRICE_ID"]
+MON_URL_STREAMLIT = st.secrets["MON_URL_STREAMLIT"]
+GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 
-# Configuration du client API Google GenAI
-try:
-    client = genai.Client(api_key=GEMINI_API_KEY)
-    st.sidebar.success("✅ API Gemini connectée")
-except Exception as e:
-    st.error(f"❌ Erreur API Gemini : {e}")
-    st.stop()
+stripe.api_key = STRIPE_SECRET_KEY
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ============================================
 # SESSION STATE
@@ -45,261 +29,152 @@ if "total_spent" not in st.session_state:
     st.session_state.total_spent = 0
 if "generated_products" not in st.session_state:
     st.session_state.generated_products = []
-if "payment_processing" not in st.session_state:
-    st.session_state.payment_processing = False
 
 # ============================================
-# INTERFACE PRINCIPALE
+# TITRE ET STATISTIQUES SIMPLIFIÉES
 # ============================================
-st.title("🛍️ Générateur de Fiches Produits")
-st.write("💰 **Paiement réel avec Stripe** - 0,99€ par fiche")
+st.title("🛍️ Créez votre fiche produit en 1 minute")
+st.caption("🤖 Généré par IA · 0.99€ par fiche · 🔒 Paiement sécurisé")
 
-# Statistiques
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(2)
 with col1:
-    st.metric("📝 Générations", st.session_state.generations)
+    st.metric("📝 Fiches créées", st.session_state.generations)
 with col2:
-    st.metric("💳 Dépensé", f"{st.session_state.total_spent:.2f} €")
-with col3:
-    st.metric("📦 Produits", len(st.session_state.generated_products))
+    st.metric("💰 Dépensé", f"{st.session_state.total_spent:.2f}€")
 
 # ============================================
-# AJOUT AU PANIER
+# FORMULAIRE PRODUIT
 # ============================================
 st.subheader("📝 Nouvelle fiche produit")
 
-nom_produit = st.text_input("Nom du produit :", placeholder="Ex: Robe en cuir")
-caracteristiques = st.text_area("Caractéristiques :", placeholder="Ex: Matière: Cuir véritable, Couleur: Noir")
+with st.container(border=True):
+    nom_produit = st.text_input("Nom du produit *", placeholder="Ex: Sac en cuir")
+    caracteristiques = st.text_area("Caractéristiques *", placeholder="Ex: Cuir véritable, 30x25cm, noir")
 
-if st.button("➕ Ajouter au panier", type="secondary"):
-    if nom_produit and caracteristiques:
-        st.session_state.cart.append({
-            "nom": nom_produit,
-            "caracteristiques": caracteristiques,
-            "prix": 0.99
-        })
-        st.success(f"✅ {nom_produit} ajouté au panier (0.99€)")
-        st.balloons()
-    else:
-        st.warning("⚠️ Remplissez tous les champs")
+    if st.button("➕ Ajouter au panier", type="secondary", use_container_width=True):
+        if nom_produit and caracteristiques:
+            st.session_state.cart.append({
+                "nom": nom_produit,
+                "caracteristiques": caracteristiques,
+                "prix": 0.99
+            })
+            st.success(f"✅ {nom_produit} ajouté !")
+            st.balloons()
+            st.rerun()
+        else:
+            st.warning("⚠️ Remplissez tous les champs")
 
 # ============================================
-# PANIER ET PAIEMENT
+# PANIER - SIMPLIFIÉ
 # ============================================
 if st.session_state.cart:
+    st.divider()
     st.subheader("🛒 Votre panier")
+    
     total = sum(item["prix"] for item in st.session_state.cart)
     quantity = len(st.session_state.cart)
     
     # Liste des articles
     for i, item in enumerate(st.session_state.cart):
-        col1, col2, col3 = st.columns([3, 1, 0.5])
+        col1, col2, col3 = st.columns([3, 1, 0.3])
         with col1:
             st.write(f"**{item['nom']}**")
         with col2:
-            st.write(f"{item['prix']:.2f} €")
+            st.write(f"{item['prix']:.2f}€")
         with col3:
-            if st.button("🗑️", key=f"remove_{i}"):
+            if st.button("✕", key=f"remove_{i}"):
                 st.session_state.cart.pop(i)
                 st.rerun()
     
     st.divider()
-    st.write(f"**Total : {total:.2f} €**")
-    st.write(f"**Quantité : {quantity} fiche(s)**")
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.write(f"**Total : {total:.2f}€**")
+        st.caption(f"{quantity} fiche(s)")
     
-    # ============================================
-    # PAIEMENT STRIPE AVEC PRICE_ID
-    # ============================================
-    st.info("💳 Paiement sécurisé par Stripe")
+    with col2:
+        # BOUTON DE PAIEMENT CLAIR
+        if st.button("💳 Payer maintenant", type="primary", use_container_width=True):
+            try:
+                checkout_session = stripe.checkout.Session.create(
+                    payment_method_types=['card'],
+                    line_items=[{
+                        'price': STRIPE_PRICE_ID,
+                        'quantity': quantity,
+                    }],
+                    mode='payment',
+                    success_url=f"{MON_URL_STREAMLIT}?payment=success",
+                    cancel_url=f"{MON_URL_STREAMLIT}?payment=cancel",
+                )
+                
+                st.markdown(f'''
+                <meta http-equiv="refresh" content="0;url={checkout_session.url}">
+                <div style="text-align:center; padding:20px;">
+                    <p>🔒 Redirection vers Stripe...</p>
+                    <a href="{checkout_session.url}" target="_blank">Cliquez ici</a>
+                </div>
+                ''', unsafe_allow_html=True)
+                
+            except Exception as e:
+                st.error(f"Erreur : {e}")
     
-    if st.button("💳 Payer avec Stripe", type="primary", use_container_width=True):
-        try:
-            # Créer la session de paiement Stripe
-            checkout_session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                line_items=[{
-                    'price': STRIPE_PRICE_ID,  # Votre Price ID
-                    'quantity': quantity,      # Nombre de fiches
-                }],
-                mode='payment',
-                success_url=f"{MON_URL_STREAMLIT}?payment=success",
-                cancel_url=f"{MON_URL_STREAMLIT}?payment=cancel",
-                metadata={
-                    'quantity': quantity,
-                    'products': json.dumps([
-                        {'nom': item['nom']} 
-                        for item in st.session_state.cart
-                    ])
-                }
-            )
-            
-            # Stocker l'ID de session
-            st.session_state.checkout_session_id = checkout_session.id
-            
-            # Redirection vers Stripe avec JavaScript
-            st.markdown(f'''
-            <div style="text-align: center; padding: 30px; background-color: #f0f0f0; border-radius: 10px;">
-                <h3>🔒 Redirection vers Stripe...</h3>
-                <p>Veuillez patienter, vous allez être redirigé vers la page de paiement sécurisée.</p>
-                <br>
-                <a href="{checkout_session.url}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #635bff; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                    💳 Cliquez ici si la redirection ne fonctionne pas
-                </a>
-                <br><br>
-                <small>⚠️ Ne fermez pas cette page pendant le paiement.</small>
-            </div>
-            <script>
-                setTimeout(function() {{
-                    window.location.href = "{checkout_session.url}";
-                }}, 1000);
-            </script>
-            ''', unsafe_allow_html=True)
-            
-            st.session_state.payment_processing = True
-            
-        except stripe.error.AuthenticationError:
-            st.error("❌ Erreur d'authentification Stripe. Vérifiez votre clé secrète.")
-        except stripe.error.InvalidRequestError as e:
-            st.error(f"❌ Erreur de requête Stripe : {e}")
-        except Exception as e:
-            st.error(f"❌ Erreur de paiement : {e}")
+    st.caption("🔒 Paiement sécurisé par Stripe")
 
 # ============================================
-# TRAITEMENT APRÈS PAIEMENT RÉUSSI
+# TRAITEMENT APRÈS PAIEMENT
 # ============================================
 if st.query_params.get("payment") == "success":
-    st.success("✅ Paiement accepté ! Génération des fiches produits...")
     st.query_params.clear()
+    st.success("✅ Paiement accepté ! Génération...")
     
-    # Vider le panier après paiement réussi
     if st.session_state.cart:
-        with st.spinner("Génération des fiches produits..."):
-            progress_bar = st.progress(0)
-            
-            for idx, item in enumerate(st.session_state.cart):
-                progress_bar.progress((idx + 1) / len(st.session_state.cart))
+        for item in st.session_state.cart:
+            try:
+                prompt = f"""Rédige une fiche produit pour : {item['nom']}.
+                Caractéristiques : {item['caracteristiques']}.
+                Structure : Titre, Description, Caractéristiques techniques, Avantages.
+                """
                 
-                try:
-                    prompt = f"""Rédige une fiche produit e-commerce captivante pour : {item['nom']}.
-                    Caractéristiques : {item['caracteristiques']}.
-                    
-                    Structure la réponse avec :
-                    - Titre accrocheur
-                    - Description détaillée (100-150 mots)
-                    - Caractéristiques techniques (tableau)
-                    - Avantages (3 points)
-                    - Appel à l'action
-                    """
-                    
-                    response = client.models.generate_content(
-                        model='gemini-2.0-flash-exp',
-                        contents=prompt,
-                    )
-                    
-                    st.session_state.generated_products.append({
-                        "nom": item['nom'],
-                        "contenu": response.text,
-                        "prix": 0.99,
-                        "date": time.strftime("%d/%m/%Y %H:%M")
-                    })
-                    st.session_state.generations += 1
-                    st.session_state.total_spent += 0.99
-                    
-                except Exception as e:
-                    st.error(f"❌ Erreur pour {item['nom']} : {e}")
-            
-            st.session_state.cart = []
-            st.session_state.payment_processing = False
-            st.success("🎉 Toutes les fiches ont été générées !")
-            st.balloons()
-            time.sleep(2)
-            st.rerun()
-    else:
-        st.warning("⚠️ Panier vide. Rien à générer.")
-
-if st.query_params.get("payment") == "cancel":
-    st.warning("⚠️ Paiement annulé")
-    st.query_params.clear()
-    st.session_state.payment_processing = False
+                response = client.models.generate_content(
+                    model='gemini-2.0-flash-exp',
+                    contents=prompt,
+                )
+                
+                st.session_state.generated_products.append({
+                    "nom": item['nom'],
+                    "contenu": response.text,
+                    "prix": 0.99
+                })
+                st.session_state.generations += 1
+                st.session_state.total_spent += 0.99
+                
+            except Exception as e:
+                st.error(f"Erreur pour {item['nom']}")
+        
+        st.session_state.cart = []
+        st.success("🎉 Fiche(s) générée(s) !")
+        st.balloons()
+        st.rerun()
 
 # ============================================
 # PRODUITS GÉNÉRÉS
 # ============================================
 if st.session_state.generated_products:
+    st.divider()
     st.subheader("📦 Mes fiches produits")
     
     for i, product in enumerate(st.session_state.generated_products):
-        with st.expander(f"📄 {product['nom']} - {product['date']}"):
+        with st.expander(f"📄 {product['nom']}"):
             st.markdown(product['contenu'])
-            
-            col1, col2, col3 = st.columns([2, 2, 1])
-            with col1:
-                if st.button("📋 Copier", key=f"copy_{i}"):
-                    st.info("💡 Sélectionnez le texte et faites Ctrl+C")
-            with col2:
-                if st.button("📥 Télécharger TXT", key=f"download_{i}"):
-                    st.download_button(
-                        label="📥 Télécharger",
-                        data=product['contenu'],
-                        file_name=f"{product['nom']}_fiche.txt",
-                        mime="text/plain"
-                    )
-            with col3:
-                if st.button("🗑️", key=f"delete_{i}"):
-                    st.session_state.generated_products.pop(i)
-                    st.rerun()
+            if st.button("🗑️ Supprimer", key=f"del_{i}"):
+                st.session_state.generated_products.pop(i)
+                st.rerun()
     
-    # Export JSON de toutes les fiches
-    if st.button("📥 Exporter tout en JSON"):
-        export_data = {
-            "total_generations": st.session_state.generations,
-            "total_spent": st.session_state.total_spent,
-            "products": st.session_state.generated_products
-        }
+    if st.button("📥 Exporter tout"):
+        export_data = {"products": st.session_state.generated_products}
         st.download_button(
-            label="📥 Télécharger JSON",
+            label="Télécharger JSON",
             data=json.dumps(export_data, indent=2, ensure_ascii=False),
-            file_name="mes_fiches_produits.json",
+            file_name="fiches.json",
             mime="application/json"
         )
-
-# ============================================
-# SIDEBAR
-# ============================================
-with st.sidebar:
-    st.header("⚙️ Configuration")
-    
-    st.write("### 💳 Stripe")
-    st.success("✅ Mode Production")
-    st.caption(f"Price ID: {STRIPE_PRICE_ID}")
-    
-    st.write("### 🏷️ Produit Stripe")
-    st.write("**Fiche produit e-commerce**")
-    st.write("Prix: **0.99€**")
-    
-    st.write("### 🤖 IA")
-    st.write("**Gemini 2.0 Flash**")
-    
-    st.write("### 📦 Panier")
-    if st.session_state.cart:
-        st.write(f"**{len(st.session_state.cart)}** article(s)")
-        st.write(f"Total : **{sum(item['prix'] for item in st.session_state.cart):.2f} €**")
-    else:
-        st.write("Vide")
-    
-    st.divider()
-    st.write("### 📊 Statistiques")
-    st.write(f"Générations: {st.session_state.generations}")
-    st.write(f"Dépensé: {st.session_state.total_spent:.2f} €")
-    st.write(f"Produits: {len(st.session_state.generated_products)}")
-
-# ============================================
-# FOOTER
-# ============================================
-st.divider()
-st.caption("🔒 Paiement sécurisé par Stripe • 0.99€ par fiche produit")
-
-    
-    
-
-
