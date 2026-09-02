@@ -4,7 +4,7 @@ from google import genai
 # Configuration de la page
 st.set_page_config(page_title="Générateur IA Pro", page_icon="🛍️")
 
-# 1. Gestion de la limitation gratuite (Stockée dans la session de l'utilisateur)
+# 1. Gestion de la limitation gratuite
 if "compteur_essais" not in st.session_state:
     st.session_state.compteur_essais = 0
 
@@ -17,7 +17,6 @@ except Exception:
 
 st.title("🛍️ Générateur de Fiches Produits E-Commerce")
 st.write(f"Essais gratuits utilisés : **{st.session_state.compteur_essais} / 3**")
-
 
 # 2. Vérification de la limite de gratuité
 if st.session_state.compteur_essais >= 3:
@@ -33,11 +32,10 @@ if st.session_state.compteur_essais >= 3:
     * ⏰ **Un gain de temps massif** (15 minutes économisées par produit)
     """)
     
-    # Bouton de paiement visuel (Mettez votre lien Stripe ou PayPal entre les guillemets après href=)
+    # Bouton de paiement visuel (Remplacez par votre vrai lien Stripe ou PayPal entre les guillemets)
     lien_paiement = "https://stripe.com"
     st.markdown(f'<a href="{lien_paiement}" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #00D4B2; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; text-align: center; width: 100%;">🚀 Débloquer la Version Pro (9,99€)</a>', unsafe_allow_html=True)
     st.stop()
-
 
 # 3. Interface de saisie
 nom_produit = st.text_input("Nom du produit :", placeholder="Ex: Gourde isotherme")
@@ -49,22 +47,23 @@ if st.button("🚀 Générer la fiche produit"):
             try:
                 prompt = f"Rédige une fiche produit e-commerce captivante pour : {nom_produit}. Caractéristiques : {caracteristiques}."
                 
-                               # Utilisation d'un modèle ultra-stable et disponible pour éviter la saturation
+                # Utilisation stricte du modèle de production stable
                 response = client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-2.5-flash',
                     contents=prompt,
                 )
-
                 
                 # Affichage immédiat du texte sur l'écran
                 st.success("Généré avec succès !")
                 st.markdown(response.text)
                 
-                # Incrémentation du compteur sans effacer l'affichage
+                # Incrémentation du compteur
                 st.session_state.compteur_essais += 1
                 
             except Exception as e:
                 st.error(f"Erreur lors de la génération : {e}")
     else:
         st.warning("Veuillez remplir tous les champs.")
+
+
 
