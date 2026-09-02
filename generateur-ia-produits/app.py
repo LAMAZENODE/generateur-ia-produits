@@ -43,15 +43,16 @@ nom_produit = st.text_input("Nom du produit :", placeholder="Ex: Gourde isotherm
 caracteristiques = st.text_area("Caractéristiques :", placeholder="Ex: En inox, 750ml")
 
 
+
 if st.button("🚀 Générer la fiche produit"):
     if nom_produit and caracteristiques:
         with st.spinner("L'IA rédige votre texte..."):
             try:
                 prompt = f"Rédige une fiche produit e-commerce captivante pour : {nom_produit}. Caractéristiques : {caracteristiques}."
                 
-                # Utilisation exclusive du modèle officiel requis par Google
+                # Utilisation du modèle officiel et universel du SDK google-genai
                 response = client.models.generate_content(
-                    model='gemini-3.6-flash',
+                    model='gemini-2.5-flash',
                     contents=prompt,
                 )
                 
@@ -63,7 +64,7 @@ if st.button("🚀 Générer la fiche produit"):
                 st.session_state.compteur_essais += 1
                 
             except Exception as e:
-                # Gestion propre du pic de charge sans planter l'application
-                st.error("⚡ Les serveurs de Google reçoivent beaucoup de demandes en ce moment. Veuillez simplement recliquer sur le bouton pour relancer la génération.")
+                # Si une vraie erreur arrive, on l'affiche pour comprendre
+                st.error(f"Une erreur technique est survenue : {e}")
     else:
         st.warning("Veuillez remplir tous les champs.")
