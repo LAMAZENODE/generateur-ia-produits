@@ -41,17 +41,29 @@ if st.session_state.compteur_essais >= 3:
 nom_produit = st.text_input("Nom du produit :", placeholder="Ex: Gourde isotherme")
 caracteristiques = st.text_area("Caractéristiques :", placeholder="Ex: En inox, 750ml")
 
+
 if st.button("🚀 Générer la fiche produit"):
     if nom_produit and caracteristiques:
         with st.spinner("L'IA rédige votre texte..."):
             try:
                 prompt = f"Rédige une fiche produit e-commerce captivante pour : {nom_produit}. Caractéristiques : {caracteristiques}."
                 
-                # Utilisation stricte du modèle de production stable
-                response = client.models.generate_content(
-                    model='gemini-3.6-flash',
-                    contents=prompt,
-                )
+                # Étape 1 : On tente le modèle principal que vous avez choisi
+                try:
+                    response = client.models.generate_content(
+                        model='gemini-3.6-flash',
+                        contents=prompt,
+                    )
+                # Étape 2 : Si le serveur 3.6 est saturé (503), on tente une bascule automatique
+                except Exception as e:
+                    if "503" in str(e) or "UNAVAILABLE" in str(e):
+                        # Modèle alternatif en cas de surcharge temporaire du 3.6
+                        response = client.models.generate_content(
+                            model='gemini-1.5-pro', 
+                            contents=prompt,
+                        )
+                    else:
+                        raise e
                 
                 # Affichage immédiat du texte sur l'écran
                 st.success("Généré avec succès !")
@@ -61,9 +73,6 @@ if st.button("🚀 Générer la fiche produit"):
                 st.session_state.compteur_essais += 1
                 
             except Exception as e:
-                st.error(f"Erreur lors de la génération : {e}")
+                st.error(f"Les serveurs de l'IA subissent une forte demande. Veuillez cliquer à nouveau sur le bouton dans quelques secondes. (Détail : {e})")
     else:
         st.warning("Veuillez remplir tous les champs.")
-
-
-
