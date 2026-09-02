@@ -1,0 +1,58 @@
+import streamlit as st
+from google import genai
+
+# Configuration de la page
+st.set_page_config(page_title="Générateur IA Pro", page_icon="🛍️")
+
+# 1. Gestion de la limitation gratuite (Stockée dans la session de l'utilisateur)
+if "compteur_essais" not in st.session_state:
+    st.session_state.compteur_essais = 0
+
+# Configuration automatique du client GenAI via GEMINI_API_KEY
+try:
+    client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+except Exception:
+    st.error("Configuration API manquante. Veuillez vérifier votre GEMINI_API_KEY dans les Secrets Streamlit.")
+    st.stop()
+
+st.title("🛍️ Générateur de Fiches Produits E-Commerce")
+st.write(f"Essais gratuits utilisés : **{st.session_state.compteur_essais} / 3**")
+
+# 2. Vérification de la limite de gratuité
+if st.session_state.compteur_essais >= 3:
+    st.error("❌ Vous avez atteint la limite de 3 essais gratuits.")
+    st.info("Pour débloquer les générations illimitées et booster vos ventes, passez à la version Pro :")
+    
+    # Intégration du bouton Stripe (À remplacer par votre vrai lien Stripe)
+    lien_stripe = "https://stripe.com"
+    st.markdown(f'<a href="{lien_stripe}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #00D4B2; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; text-align: center;">🚀 Débloquer la Version Pro (9,99€)</a>', unsafe_allow_html=True)
+    st.stop()
+
+# 3. Interface de saisie
+nom_produit = st.text_input("Nom du produit :", placeholder="Ex: Gourde isotherme")
+caracteristiques = st.text_area("Caractéristiques :", placeholder="Ex: En inox, 750ml")
+
+if st.button("🚀 Générer la fiche produit"):
+    if nom_produit and caracteristiques:
+        with st.spinner("L'IA rédige votre texte..."):
+            try:
+                prompt = f"Rédige une fiche produit e-commerce captivante pour : {nom_produit}. Caractéristiques : {caracteristiques}."
+                
+                # Correction majeure : Utilisation du modèle gemini-3.6-flash exigé par Google
+                response = client.models.generate_content(
+                    model='gemini-3.6-flash',
+                    contents=prompt,
+                )
+                
+                # Affichage immédiat du texte sur l'écran
+                st.success("Généré avec succès !")
+                st.markdown(response.text)
+                
+                # Incrémentation du compteur sans effacer l'affichage
+                st.session_state.compteur_essais += 1
+                
+            except Exception as e:
+                st.error(f"Erreur lors de la génération : {e}")
+    else:
+        st.warning("Veuillez remplir tous les champs.")
+
