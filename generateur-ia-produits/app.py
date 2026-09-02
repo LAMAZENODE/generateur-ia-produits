@@ -33,7 +33,8 @@ if st.session_state.compteur_essais >= 3:
     """)
     
     # Bouton de paiement visuel (Remplacez par votre vrai lien Stripe ou PayPal entre les guillemets)
-    lien_paiement = "https://stripe.com"
+    lien_paiement = "https://buy.stripe.com/fZucN4dmn7TQ73eg3K8g002"
+    
     st.markdown(f'<a href="{lien_paiement}" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #00D4B2; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; text-align: center; width: 100%;">🚀 Débloquer la Version Pro (9,99€)</a>', unsafe_allow_html=True)
     st.stop()
 
