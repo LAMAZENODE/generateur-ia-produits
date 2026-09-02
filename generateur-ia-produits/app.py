@@ -48,21 +48,11 @@ if st.button("🚀 Générer la fiche produit"):
             try:
                 prompt = f"Rédige une fiche produit e-commerce captivante pour : {nom_produit}. Caractéristiques : {caracteristiques}."
                 
-                # Étape 1 : On tente le modèle ultra-récent 3.6-flash
-                try:
-                    response = client.models.generate_content(
-                        model='gemini-3.6-flash',
-                        contents=prompt,
-                    )
-                # Étape 2 : Si le 3.6 est saturé (503), on bascule sur la version de production 2.0-flash
-                except Exception as e:
-                    if "503" in str(e) or "UNAVAILABLE" in str(e):
-                        response = client.models.generate_content(
-                            model='gemini-2.0-flash', # Secours universel et ultra-rapide
-                            contents=prompt,
-                        )
-                    else:
-                        raise e
+                # Utilisation exclusive du modèle officiel requis par Google
+                response = client.models.generate_content(
+                    model='gemini-3.6-flash',
+                    contents=prompt,
+                )
                 
                 # Affichage immédiat du texte sur l'écran
                 st.success("Généré avec succès !")
@@ -72,7 +62,7 @@ if st.button("🚀 Générer la fiche produit"):
                 st.session_state.compteur_essais += 1
                 
             except Exception as e:
-                st.error(f"Les serveurs de l'IA subissent une forte demande. Veuillez cliquer à nouveau sur le bouton dans quelques secondes. (Détail : {e})")
+                # Gestion propre du pic de charge sans planter l'application
+                st.error("⚡ Les serveurs de Google reçoivent beaucoup de demandes en ce moment. Veuillez simplement recliquer sur le bouton pour relancer la génération.")
     else:
         st.warning("Veuillez remplir tous les champs.")
-
