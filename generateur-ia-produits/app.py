@@ -48,18 +48,17 @@ if st.button("🚀 Générer la fiche produit"):
             try:
                 prompt = f"Rédige une fiche produit e-commerce captivante pour : {nom_produit}. Caractéristiques : {caracteristiques}."
                 
-                # Étape 1 : On tente le modèle principal que vous avez choisi
+                # Étape 1 : On tente le modèle ultra-récent 3.6-flash
                 try:
                     response = client.models.generate_content(
                         model='gemini-3.6-flash',
                         contents=prompt,
                     )
-                # Étape 2 : Si le serveur 3.6 est saturé (503), on tente une bascule automatique
+                # Étape 2 : Si le 3.6 est saturé (503), on bascule sur la version de production 2.0-flash
                 except Exception as e:
                     if "503" in str(e) or "UNAVAILABLE" in str(e):
-                        # Modèle alternatif en cas de surcharge temporaire du 3.6
                         response = client.models.generate_content(
-                            model='gemini-1.5-pro', 
+                            model='gemini-2.0-flash', # Secours universel et ultra-rapide
                             contents=prompt,
                         )
                     else:
