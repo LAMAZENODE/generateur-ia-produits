@@ -51,7 +51,7 @@ if st.button("🚀 Générer la fiche produit"):
                 
                                # Utilisation d'un modèle ultra-stable et disponible pour éviter la saturation
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-1.5-flash',
                     contents=prompt,
                 )
 
