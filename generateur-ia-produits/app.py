@@ -298,3 +298,8 @@ with st.sidebar:
 # ============================================
 st.divider()
 st.caption("🔒 Paiement sécurisé par Stripe • 0.99€ par fiche produit")
+
+    
+    
+
+
