@@ -59,7 +59,7 @@ if st.button("🚀 Générer la fiche produit"):
                     if "503" in str(e) or "UNAVAILABLE" in str(e):
                         # Modèle alternatif en cas de surcharge temporaire du 3.6
                         response = client.models.generate_content(
-                            model='gemini-1.5-pro', 
+                            model='gemini-3.6-pro', 
                             contents=prompt,
                         )
                     else:
