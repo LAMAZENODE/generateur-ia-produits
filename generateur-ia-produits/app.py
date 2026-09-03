@@ -16,10 +16,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# CSS Mobile First
+# CSS Mobile First avec support desktop
 st.markdown("""
 <style>
-    /* Mobile First Design */
+    /* Reset et base */
     .stApp {
         max-width: 100%;
         padding: 0.5rem;
@@ -34,14 +34,14 @@ st.markdown("""
     
     /* Boutons pleine largeur sur mobile */
     .stButton button {
-        width: 100% !important;
         border-radius: 10px !important;
         padding: 12px !important;
         font-size: 16px !important;
         font-weight: 600 !important;
+        transition: all 0.3s ease;
     }
     
-    /* Inputs adaptés au mobile */
+    /* Inputs adaptés */
     .stTextInput input, .stTextArea textarea {
         font-size: 16px !important;
         padding: 12px !important;
@@ -51,48 +51,75 @@ st.markdown("""
     /* Métriques adaptées */
     .stMetric {
         background: #f8f9fa;
-        padding: 10px;
+        padding: 8px;
         border-radius: 10px;
         text-align: center;
-        margin: 4px 0;
+        margin: 2px 0;
     }
     
-    /* Métriques en grille sur mobile */
-    @media (max-width: 768px) {
-        .stMetric {
-            padding: 8px;
+    /* Responsive Desktop */
+    @media (min-width: 769px) {
+        .stApp {
+            padding: 1rem 2rem;
         }
-        .stMetric label {
-            font-size: 12px !important;
+        .stContainer {
+            padding: 20px !important;
         }
-        .stMetric div {
+        .stButton button {
+            padding: 14px !important;
             font-size: 18px !important;
         }
-        
-        /* Colonnes en stack sur mobile */
+        h1 {
+            font-size: 36px !important;
+        }
+    }
+    
+    /* Responsive Mobile */
+    @media (max-width: 768px) {
+        .stApp {
+            padding: 0.25rem;
+        }
+        .stContainer {
+            padding: 8px !important;
+            margin: 4px 0 !important;
+        }
         .stColumns {
             flex-direction: column !important;
         }
-        
-        /* Titres plus petits */
-        h1 {
-            font-size: 24px !important;
+        .stMetric {
+            padding: 4px;
         }
-        h2, .stSubheader {
-            font-size: 18px !important;
+        .stMetric label {
+            font-size: 11px !important;
         }
-        h3 {
+        .stMetric div {
             font-size: 16px !important;
         }
-        
-        /* Badge promo responsive */
-        .promo-badge {
+        h1 {
+            font-size: 20px !important;
+        }
+        h2, .stSubheader {
+            font-size: 16px !important;
+        }
+        h3 {
             font-size: 14px !important;
+        }
+        .stButton button {
             padding: 10px !important;
+            font-size: 14px !important;
+        }
+        .stTextInput input, .stTextArea textarea {
+            font-size: 14px !important;
+            padding: 8px !important;
+        }
+        /* Bannière promo mobile */
+        .promo-badge {
+            font-size: 12px !important;
+            padding: 8px !important;
         }
     }
     
-    /* Animation pour les notifications */
+    /* Animations */
     @keyframes slideIn {
         from { transform: translateY(-100%); opacity: 0; }
         to { transform: translateY(0); opacity: 1; }
@@ -101,44 +128,45 @@ st.markdown("""
         animation: slideIn 0.3s ease-out;
     }
     
-    /* Panier responsive */
-    .cart-item {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 12px;
-        margin: 6px 0;
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
+    }
+    .promo-badge {
+        animation: pulse 2s infinite;
     }
     
     /* Badge de confiance */
     .trust-badge {
         background: #f0f4ff;
         border-radius: 10px;
-        padding: 12px;
-        margin: 8px 0;
+        padding: 10px;
+        margin: 6px 0;
         font-size: 13px;
         border-left: 4px solid #6772e5;
+        text-align: center;
     }
     
-    /* Bouton flottant pour le panier */
-    .floating-cart {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
+    /* Cart item */
+    .cart-item {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 10px;
+        margin: 4px 0;
+    }
+    
+    /* Scrollbar personnalisée */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
         background: #6772e5;
-        color: white;
-        border-radius: 50px;
-        padding: 12px 20px;
-        box-shadow: 0 4px 15px rgba(103, 114, 229, 0.4);
-        z-index: 999;
-        cursor: pointer;
-        font-weight: bold;
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
+        border-radius: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -181,8 +209,6 @@ if "payment_processing" not in st.session_state:
     st.session_state.payment_processing = False
 if "user_count" not in st.session_state:
     st.session_state.user_count = 847
-if "daily_generations" not in st.session_state:
-    st.session_state.daily_generations = 0
 if "promo_badge" not in st.session_state:
     promotions = [
         "🔥 3 fiches achetées, 1 offerte !",
@@ -203,10 +229,6 @@ if "form_mots_cles" not in st.session_state:
     st.session_state.form_mots_cles = ""
 if "form_include_pricing" not in st.session_state:
     st.session_state.form_include_pricing = True
-if "show_cart" not in st.session_state:
-    st.session_state.show_cart = False
-if "mobile_view" not in st.session_state:
-    st.session_state.mobile_view = True
 
 # ============================================
 # FONCTIONS UTILITAIRES
@@ -290,19 +312,19 @@ def calculer_total_avec_reduction(cart):
         return quantity * 0.99, ""
 
 # ============================================
-# EN-TÊTE MOBILE
+# EN-TÊTE
 # ============================================
 # Bannière promotionnelle
 st.markdown(f"""
 <div class="promo-badge" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); 
             padding: 12px; border-radius: 10px; color: white; text-align: center; 
-            margin-bottom: 15px; font-weight: bold; font-size: 16px;
-            animation: pulse 2s infinite;">
+            margin-bottom: 15px; font-weight: bold; font-size: clamp(14px, 2vw, 20px);
+            box-shadow: 0 4px 15px rgba(255,107,107,0.3);">
     {st.session_state.promo_badge}
 </div>
 """, unsafe_allow_html=True)
 
-# Titre avec compteur panier
+# Titre + compteur panier
 col_title, col_cart_icon = st.columns([4, 1])
 with col_title:
     st.title("🛍️ Fiche Produit IA")
@@ -310,7 +332,9 @@ with col_cart_icon:
     if len(st.session_state.cart) > 0:
         st.markdown(f"""
         <div style="background: #6772e5; color: white; border-radius: 50px; 
-                    padding: 8px 12px; text-align: center; font-weight: bold; margin-top: 5px;">
+                    padding: 6px 12px; text-align: center; font-weight: bold; 
+                    margin-top: 5px; font-size: clamp(14px, 1.5vw, 18px);
+                    box-shadow: 0 2px 10px rgba(103, 114, 229, 0.3);">
             🛒 {len(st.session_state.cart)}
         </div>
         """, unsafe_allow_html=True)
@@ -351,18 +375,21 @@ with st.container(border=True):
     
     # Options avancées en accordéon
     with st.expander("⚙️ Options", expanded=False):
-        ton = st.select_slider(
-            "🎯 Ton",
-            options=["Professionnel", "Chaleureux", "Luxe", "Minimaliste", "Dynamique"],
-            value=st.session_state.form_ton,
-            key="input_ton"
-        )
-        longueur = st.select_slider(
-            "📏 Longueur",
-            options=["Courte", "Moyenne", "Détaillée"],
-            value=st.session_state.form_longueur,
-            key="input_longueur"
-        )
+        col_opt1, col_opt2 = st.columns(2)
+        with col_opt1:
+            ton = st.select_slider(
+                "🎯 Ton",
+                options=["Professionnel", "Chaleureux", "Luxe", "Minimaliste", "Dynamique"],
+                value=st.session_state.form_ton,
+                key="input_ton"
+            )
+        with col_opt2:
+            longueur = st.select_slider(
+                "📏 Longueur",
+                options=["Courte", "Moyenne", "Détaillée"],
+                value=st.session_state.form_longueur,
+                key="input_longueur"
+            )
         mots_cles = st.text_input(
             "🔑 Mots-clés SEO",
             placeholder="Ex: sac, cuir, élégant",
@@ -439,7 +466,7 @@ else:
         st.info(f"💡 +{3 - len(st.session_state.cart)} fiche(s) pour offre groupée")
 
 # ============================================
-# PANIER (Affiché directement si des articles)
+# PANIER
 # ============================================
 if st.session_state.cart:
     st.subheader("🛒 Panier")
@@ -451,7 +478,7 @@ if st.session_state.cart:
                 st.write(f"**{item['nom']}**")
                 st.caption(f"🎯 {item.get('ton', 'Pro')} | 📏 {item.get('longueur', 'Moy')}")
             with col2:
-                st.write(f"0.99€")
+                st.write("0.99€")
             with col3:
                 if st.button("✕", key=f"remove_{i}"):
                     st.session_state.cart.pop(i)
@@ -469,7 +496,7 @@ if st.session_state.cart:
         st.write(f"**Total : {total:.2f}€**")
     st.caption(f"{len(st.session_state.cart)} fiche(s)")
     
-    # Badge de confiance mobile
+    # Badge de confiance
     st.markdown("""
     <div class="trust-badge">
         💬 Support 24/7 · 🔒 Paiement sécurisé · 📝 Instantané
@@ -548,9 +575,13 @@ if st.session_state.generated_products:
     # Filtres compacts
     col_search, col_filter = st.columns([2, 1])
     with col_search:
-        search_term = st.text_input("🔍 Rechercher", placeholder="Nom...")
+        search_term = st.text_input("🔍 Rechercher", placeholder="Nom...", key="search_input")
     with col_filter:
-        filter_ton = st.selectbox("🎯 Filtre", ["Tous", "Professionnel", "Chaleureux", "Luxe", "Minimaliste", "Dynamique"])
+        filter_ton = st.selectbox(
+            "🎯 Filtre", 
+            ["Tous", "Professionnel", "Chaleureux", "Luxe", "Minimaliste", "Dynamique"],
+            key="filter_input"
+        )
     
     filtered_products = st.session_state.generated_products
     if search_term:
@@ -558,52 +589,57 @@ if st.session_state.generated_products:
     if filter_ton != "Tous":
         filtered_products = [p for p in filtered_products if p.get('ton', 'Professionnel') == filter_ton]
     
-    for i, product in enumerate(filtered_products):
-        real_index = st.session_state.generated_products.index(product)
-        with st.expander(f"📄 {product['nom'][:20]} - {product.get('date', '')[:10]}"):
-            st.markdown(product['contenu'])
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
+    if filtered_products:
+        for i, product in enumerate(filtered_products):
+            real_index = st.session_state.generated_products.index(product)
+            with st.expander(f"📄 {product['nom'][:20]} - {product.get('date', '')[:10]}"):
+                st.markdown(product['contenu'])
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.download_button(
+                        label="📥 Télécharger",
+                        data=product['contenu'],
+                        file_name=f"{product['nom']}_fiche.txt",
+                        mime="text/plain",
+                        key=f"download_{real_index}",
+                        use_container_width=True
+                    )
+                with col2:
+                    if st.button("📋 Copier", key=f"copy_{real_index}", use_container_width=True):
+                        st.success("✅ Copié !")
+                with col3:
+                    if st.button("🗑️ Supprimer", key=f"del_{real_index}", use_container_width=True):
+                        st.session_state.generated_products.pop(real_index)
+                        sauvegarder_session()
+                        st.rerun()
+        
+        # Export
+        col_export1, col_export2 = st.columns(2)
+        with col_export1:
+            if st.button("📥 Exporter JSON", use_container_width=True):
+                export_data = {
+                    "products": st.session_state.generated_products,
+                    "generated_at": datetime.now().isoformat()
+                }
                 st.download_button(
-                    label="📥",
-                    data=product['contenu'],
-                    file_name=f"{product['nom']}_fiche.txt",
-                    mime="text/plain",
-                    key=f"download_{real_index}"
+                    label="Télécharger",
+                    data=json.dumps(export_data, indent=2, ensure_ascii=False),
+                    file_name=f"fiches_{datetime.now().strftime('%Y%m%d')}.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key="export_json"
                 )
-            with col2:
-                if st.button("📋", key=f"copy_{real_index}"):
-                    st.success("✅ Copié !")
-            with col3:
-                if st.button("🗑️", key=f"del_{real_index}"):
-                    st.session_state.generated_products.pop(real_index)
+        with col_export2:
+            if st.button("🔄 Tout effacer", use_container_width=True):
+                if st.checkbox("Confirmer la suppression ?"):
+                    st.session_state.generated_products = []
+                    st.session_state.generations = 0
+                    st.session_state.total_spent = 0
                     sauvegarder_session()
                     st.rerun()
-    
-    # Export mobile
-    col_export1, col_export2 = st.columns(2)
-    with col_export1:
-        if st.button("📥 JSON", use_container_width=True):
-            export_data = {
-                "products": st.session_state.generated_products,
-                "generated_at": datetime.now().isoformat()
-            }
-            st.download_button(
-                label="Télécharger",
-                data=json.dumps(export_data, indent=2, ensure_ascii=False),
-                file_name=f"fiches_{datetime.now().strftime('%Y%m%d')}.json",
-                mime="application/json",
-                use_container_width=True,
-                key="export_json"
-            )
-    with col_export2:
-        if st.button("🔄 Reset", use_container_width=True):
-            if st.checkbox("Confirmer ?"):
-                st.session_state.generated_products = []
-                st.session_state.generations = 0
-                st.session_state.total_spent = 0
-                st.rerun()
+    else:
+        st.info("Aucun produit trouvé")
 
 st.divider()
 
@@ -661,8 +697,7 @@ if st.query_params.get("payment") == "success":
                     "prix": 0.99,
                     "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
                     "ton": item.get('ton', 'Professionnel'),
-                    "longueur": item.get('longueur', 'Moyenne'),
-                    "caracteristiques": item['caracteristiques']
+                    "longueur": item.get('longueur', 'Moyenne')
                 })
                 st.session_state.generations += 1
                 st.session_state.total_spent += 0.99
@@ -670,7 +705,7 @@ if st.query_params.get("payment") == "success":
                 sauvegarder_session()
                 
             except Exception as e:
-                st.error(f"❌ {item['nom']}")
+                st.error(f"❌ Erreur pour {item['nom']}")
                 st.session_state.generated_products.append({
                     "nom": item['nom'],
                     "contenu": f"""**{item['nom']}** - Fiche produit
@@ -700,7 +735,7 @@ if st.query_params.get("payment") == "success":
         st.rerun()
 
 # ============================================
-# EXEMPLE ET TÉMOIGNAGES (Version compacte)
+# EXEMPLE, TÉMOIGNAGES ET FAQ (Accordéons)
 # ============================================
 with st.expander("📋 Exemple de fiche"):
     st.markdown("""
@@ -731,6 +766,9 @@ with st.expander("❓ FAQ"):
     
     **📝 Puis-je modifier ?**  
     Oui, copiez-collez le contenu.
+    
+    **💰 Y a-t-il des réductions ?**  
+    Oui ! 3 fiches = 10%, 5 fiches = 4,50€.
     """)
 
 # ============================================
@@ -739,11 +777,11 @@ with st.expander("❓ FAQ"):
 st.divider()
 col_f1, col_f2, col_f3 = st.columns(3)
 with col_f1:
-    st.caption("🤖 IA")
+    st.caption("🤖 Généré par IA")
 with col_f2:
-    st.caption(f"📊 {st.session_state.generations}")
+    st.caption(f"📊 {st.session_state.generations} fiches")
 with col_f3:
-    st.caption(f"📅 {datetime.now().strftime('%d/%m')}")
+    st.caption(f"📅 {datetime.now().strftime('%d/%m/%Y')}")
 
 # ============================================
 # SAUVEGARDE AUTOMATIQUE
