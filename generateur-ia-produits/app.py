@@ -61,6 +61,18 @@ if "promo_badge" not in st.session_state:
     st.session_state.promo_badge = random.choice(promotions)
 if "clear_form" not in st.session_state:
     st.session_state.clear_form = False
+if "form_nom" not in st.session_state:
+    st.session_state.form_nom = ""
+if "form_carac" not in st.session_state:
+    st.session_state.form_carac = ""
+if "form_ton" not in st.session_state:
+    st.session_state.form_ton = "Professionnel"
+if "form_longueur" not in st.session_state:
+    st.session_state.form_longueur = "Moyenne"
+if "form_mots_cles" not in st.session_state:
+    st.session_state.form_mots_cles = ""
+if "form_include_pricing" not in st.session_state:
+    st.session_state.form_include_pricing = True
 
 # ============================================
 # FONCTIONS UTILITAIRES
@@ -204,20 +216,6 @@ with col4:
 # FORMULAIRE PRODUIT AVEC APERÇU
 # ============================================
 st.subheader("📝 Nouvelle fiche produit")
-
-# Initialiser les valeurs du formulaire
-if "form_nom" not in st.session_state:
-    st.session_state.form_nom = ""
-if "form_carac" not in st.session_state:
-    st.session_state.form_carac = ""
-if "form_ton" not in st.session_state:
-    st.session_state.form_ton = "Professionnel"
-if "form_longueur" not in st.session_state:
-    st.session_state.form_longueur = "Moyenne"
-if "form_mots_cles" not in st.session_state:
-    st.session_state.form_mots_cles = ""
-if "form_include_pricing" not in st.session_state:
-    st.session_state.form_include_pricing = True
 
 with st.container(border=True):
     col_form1, col_form2 = st.columns([2, 1])
@@ -760,4 +758,6 @@ with col_footer4:
 if "last_backup" not in st.session_state:
     st.session_state.last_backup = time.time()
 
-if time.time() -
+if time.time() - st.session_state.last_backup > 300:  # 5 minutes
+    sauvegarder_session()
+   
