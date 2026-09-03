@@ -59,6 +59,8 @@ if "promo_badge" not in st.session_state:
         "💎 Premium : Fiches optimisées SEO incluses !"
     ]
     st.session_state.promo_badge = random.choice(promotions)
+if "clear_form" not in st.session_state:
+    st.session_state.clear_form = False
 
 # ============================================
 # FONCTIONS UTILITAIRES
@@ -171,9 +173,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Titre principal
-col_title1, col_title2 = st.columns([3, 1])
-with col_title1:
-    st.title("🛍️ Créez votre fiche produit en 1 minute")
+st.title("🛍️ Créez votre fiche produit en 1 minute")
 
 # Bannière de confiance
 st.markdown("""
@@ -205,6 +205,20 @@ with col4:
 # ============================================
 st.subheader("📝 Nouvelle fiche produit")
 
+# Initialiser les valeurs du formulaire
+if "form_nom" not in st.session_state:
+    st.session_state.form_nom = ""
+if "form_carac" not in st.session_state:
+    st.session_state.form_carac = ""
+if "form_ton" not in st.session_state:
+    st.session_state.form_ton = "Professionnel"
+if "form_longueur" not in st.session_state:
+    st.session_state.form_longueur = "Moyenne"
+if "form_mots_cles" not in st.session_state:
+    st.session_state.form_mots_cles = ""
+if "form_include_pricing" not in st.session_state:
+    st.session_state.form_include_pricing = True
+
 with st.container(border=True):
     col_form1, col_form2 = st.columns([2, 1])
     
@@ -212,15 +226,15 @@ with st.container(border=True):
         nom_produit = st.text_input(
             "Nom du produit *", 
             placeholder="Ex: Sac en cuir", 
-            value=st.session_state.get("preview_nom", ""),
-            key="nom_produit"
+            value=st.session_state.form_nom,
+            key="input_nom"
         )
         caracteristiques = st.text_area(
             "Caractéristiques *", 
             placeholder="Ex: Cuir véritable, 30x25cm, noir", 
             height=100, 
-            value=st.session_state.get("preview_carac", ""),
-            key="caracteristiques"
+            value=st.session_state.form_carac,
+            key="input_carac"
         )
         
         # Options avancées
@@ -230,28 +244,35 @@ with st.container(border=True):
                 ton = st.select_slider(
                     "🎯 Ton de la fiche",
                     options=["Professionnel", "Chaleureux", "Luxe", "Minimaliste", "Dynamique"],
-                    value="Professionnel",
-                    key="ton"
+                    value=st.session_state.form_ton,
+                    key="input_ton"
                 )
             with col_opt2:
                 longueur = st.select_slider(
                     "📏 Longueur du contenu",
                     options=["Courte", "Moyenne", "Détaillée"],
-                    value="Moyenne",
-                    key="longueur"
+                    value=st.session_state.form_longueur,
+                    key="input_longueur"
                 )
             mots_cles = st.text_input(
                 "🔑 Mots-clés SEO (optionnel)", 
                 placeholder="Ex: sac, cuir, élégant",
-                key="mots_cles"
+                value=st.session_state.form_mots_cles,
+                key="input_mots_cles"
             )
-            include_pricing = st.checkbox("💰 Inclure une suggestion de prix", value=True, key="include_pricing")
+            include_pricing = st.checkbox(
+                "💰 Inclure une suggestion de prix", 
+                value=st.session_state.form_include_pricing,
+                key="input_include_pricing"
+            )
         
-        # Stocker pour l'aperçu
-        st.session_state.preview_nom = nom_produit
-        st.session_state.preview_carac = caracteristiques
-        st.session_state.preview_ton = ton
-        st.session_state.preview_longueur = longueur
+        # Mettre à jour les valeurs du formulaire
+        st.session_state.form_nom = nom_produit
+        st.session_state.form_carac = caracteristiques
+        st.session_state.form_ton = ton
+        st.session_state.form_longueur = longueur
+        st.session_state.form_mots_cles = mots_cles
+        st.session_state.form_include_pricing = include_pricing
         
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
@@ -274,21 +295,19 @@ with st.container(border=True):
                         sauvegarder_session()
                         st.success(f"✅ {nom_produit} ajouté au panier !")
                         st.balloons()
-                        # Réinitialiser les champs
-                        st.session_state.preview_nom = ""
-                        st.session_state.preview_carac = ""
-                        st.session_state.nom_produit = ""
-                        st.session_state.caracteristiques = ""
+                        # Réinitialiser les champs du formulaire
+                        st.session_state.form_nom = ""
+                        st.session_state.form_carac = ""
+                        st.session_state.form_mots_cles = ""
                         st.rerun()
                 else:
                     st.warning("⚠️ Remplissez tous les champs obligatoires")
         
         with col_btn2:
             if st.button("🔄 Vider les champs", use_container_width=True):
-                st.session_state.preview_nom = ""
-                st.session_state.preview_carac = ""
-                st.session_state.nom_produit = ""
-                st.session_state.caracteristiques = ""
+                st.session_state.form_nom = ""
+                st.session_state.form_carac = ""
+                st.session_state.form_mots_cles = ""
                 st.rerun()
     
     with col_form2:
@@ -741,6 +760,4 @@ with col_footer4:
 if "last_backup" not in st.session_state:
     st.session_state.last_backup = time.time()
 
-if time.time() - st.session_state.last_backup > 300:  # 5 minutes
-    sauvegarder_session()
-    st.session_state.last_backup = time.time()
+if time.time() -
