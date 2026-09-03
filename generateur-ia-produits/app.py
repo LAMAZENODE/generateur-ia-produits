@@ -5,12 +5,13 @@ import time
 import stripe
 import os
 from datetime import datetime
+import random
 
 # ============================================
 # CONFIGURATION
 # ============================================
 st.set_page_config(
-    page_title="Générateur de Fiches Produits",
+    page_title="Générateur de Fiches Produits - IA",
     page_icon="🛍️",
     layout="wide"
 )
@@ -47,10 +48,10 @@ if "generated_products" not in st.session_state:
     st.session_state.generated_products = []
 if "payment_processing" not in st.session_state:
     st.session_state.payment_processing = False
-if "preview_mode" not in st.session_state:
-    st.session_state.preview_mode = False
 if "user_count" not in st.session_state:
     st.session_state.user_count = 847
+if "daily_generations" not in st.session_state:
+    st.session_state.daily_generations = 0
 
 # ============================================
 # FONCTIONS UTILITAIRES
@@ -69,27 +70,91 @@ def sauvegarder_session():
     except:
         pass
 
-def generer_apercu(nom, caracteristiques):
+def generer_apercu(nom, caracteristiques, ton="Professionnel"):
     """Génère un aperçu de la fiche produit"""
-    return f"""
-    **{nom}** - Fiche produit professionnelle
+    if not nom or not caracteristiques:
+        return None
     
-    📝 **Description** : Découvrez {nom}, alliant qualité et élégance. 
+    # Déterminer le style selon le ton
+    styles = {
+        "Professionnel": {
+            "style": "professionnel et élégant",
+            "emoji": "💼",
+            "avantages": ["Qualité premium", "Fiabilité", "Design ergonomique"]
+        },
+        "Chaleureux": {
+            "style": "convivial et accessible",
+            "emoji": "🤗",
+            "avantages": ["Confort au quotidien", "Facilité d'utilisation", "Rapport qualité-prix"]
+        },
+        "Luxe": {
+            "style": "premium et raffiné",
+            "emoji": "✨",
+            "avantages": ["Matériaux nobles", "Finition exceptionnelle", "Exclusivité"]
+        },
+        "Minimaliste": {
+            "style": "épuré et moderne",
+            "emoji": "🎯",
+            "avantages": ["Design intemporel", "Fonctionnalité pure", "Polyvalence"]
+        },
+        "Dynamique": {
+            "style": "énergique et moderne",
+            "emoji": "🚀",
+            "avantages": ["Performance", "Innovation", "Adaptabilité"]
+        }
+    }
+    
+    style_info = styles.get(ton, styles["Professionnel"])
+    
+    avantages_liste = "\n".join([f"• {avantage}" for avantage in style_info["avantages"]])
+    
+    return f"""
+    ### {style_info['emoji']} Aperçu de votre fiche
+    
+    **📌 {nom}** - Fiche produit {style_info['style']}
+    
+    **📝 Description** : Découvrez {nom}, alliant qualité et {style_info['style']}. 
     Conçu avec soin pour répondre à vos besoins quotidiens.
     
-    ✨ **Avantages** : 
-    - Durabilité exceptionnelle
-    - Confort et praticité
-    - Design unique
+    **✨ Avantages** : 
+    {avantages_liste}
     
-    🔧 **Caractéristiques** : {caracteristiques}
+    **🔧 Caractéristiques** : {caracteristiques}
     
-    💰 **Prix conseillé** : À définir selon votre marché
+    **💰 Prix conseillé** : À définir selon votre marché
+    
+    💡 *Le contenu final sera plus détaillé et optimisé par l'IA*
     """
+
+def afficher_badge_promotion():
+    """Affiche un badge de promotion aléatoire"""
+    promotions = [
+        "🎁 10% de réduction sur votre première commande !",
+        "⭐ Offre spéciale : 5 fiches pour le prix de 4 !",
+        "🔥 Promotion : 3 fiches achetées, 1 offerte !",
+        "💎 Premium : Fiches optimisées SEO incluses !"
+    ]
+    return random.choice(promotions)
 
 # ============================================
 # TITRE ET EN-TÊTE
 # ============================================
+# Bannière promotionnelle
+st.markdown(f"""
+<div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); 
+            padding: 10px; border-radius: 8px; color: white; text-align: center; 
+            margin-bottom: 20px; font-weight: bold; animation: pulse 2s infinite;">
+    🔥 OFFRE SPÉCIALE : {afficher_badge_promotion()}
+</div>
+<style>
+    @keyframes pulse {{
+        0% {{ opacity: 1; }}
+        50% {{ opacity: 0.8; }}
+        100% {{ opacity: 1; }}
+    }}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("🛍️ Créez votre fiche produit en 1 minute")
 
 # Bannière de confiance
@@ -126,45 +191,64 @@ with st.container(border=True):
     col_form1, col_form2 = st.columns([2, 1])
     
     with col_form1:
-        nom_produit = st.text_input("Nom du produit *", placeholder="Ex: Sac en cuir")
-        caracteristiques = st.text_area("Caractéristiques *", placeholder="Ex: Cuir véritable, 30x25cm, noir", height=100)
+        nom_produit = st.text_input("Nom du produit *", placeholder="Ex: Sac en cuir", value=st.session_state.get("preview_nom", ""))
+        caracteristiques = st.text_area("Caractéristiques *", placeholder="Ex: Cuir véritable, 30x25cm, noir", height=100, value=st.session_state.get("preview_carac", ""))
         
         # Options avancées
         with st.expander("⚙️ Options avancées"):
             ton = st.select_slider(
-                "Ton de la fiche",
+                "🎯 Ton de la fiche",
                 options=["Professionnel", "Chaleureux", "Luxe", "Minimaliste", "Dynamique"],
                 value="Professionnel"
             )
             longueur = st.select_slider(
-                "Longueur du contenu",
+                "📏 Longueur du contenu",
                 options=["Courte", "Moyenne", "Détaillée"],
                 value="Moyenne"
             )
-            mots_cles = st.text_input("Mots-clés SEO (optionnel)", placeholder="Ex: sac, cuir, élégant")
+            mots_cles = st.text_input("🔑 Mots-clés SEO (optionnel)", placeholder="Ex: sac, cuir, élégant")
+            include_pricing = st.checkbox("💰 Inclure une suggestion de prix", value=True)
         
-        if st.button("➕ Ajouter au panier", type="secondary", use_container_width=True):
-            if nom_produit and caracteristiques:
-                st.session_state.cart.append({
-                    "nom": nom_produit,
-                    "caracteristiques": caracteristiques,
-                    "prix": 0.99,
-                    "ton": ton,
-                    "longueur": longueur,
-                    "mots_cles": mots_cles
-                })
-                sauvegarder_session()
-                st.success(f"✅ {nom_produit} ajouté au panier !")
-                st.balloons()
+        # Stocker pour l'aperçu
+        st.session_state.preview_nom = nom_produit
+        st.session_state.preview_carac = caracteristiques
+        st.session_state.preview_ton = ton
+        
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("➕ Ajouter au panier", type="secondary", use_container_width=True):
+                if nom_produit and caracteristiques:
+                    st.session_state.cart.append({
+                        "nom": nom_produit,
+                        "caracteristiques": caracteristiques,
+                        "prix": 0.99,
+                        "ton": ton,
+                        "longueur": longueur,
+                        "mots_cles": mots_cles,
+                        "include_pricing": include_pricing
+                    })
+                    sauvegarder_session()
+                    st.success(f"✅ {nom_produit} ajouté au panier !")
+                    st.balloons()
+                    # Réinitialiser les champs
+                    st.session_state.preview_nom = ""
+                    st.session_state.preview_carac = ""
+                    st.rerun()
+                else:
+                    st.warning("⚠️ Remplissez tous les champs obligatoires")
+        
+        with col_btn2:
+            if st.button("🔄 Vider les champs", use_container_width=True):
+                st.session_state.preview_nom = ""
+                st.session_state.preview_carac = ""
                 st.rerun()
-            else:
-                st.warning("⚠️ Remplissez tous les champs obligatoires")
     
     with col_form2:
         st.markdown("### 👀 Aperçu")
-        if nom_produit and caracteristiques:
+        apercu = generer_apercu(nom_produit, caracteristiques, ton)
+        if apercu:
             with st.container(border=True):
-                st.markdown(generer_apercu(nom_produit, caracteristiques))
+                st.markdown(apercu)
                 st.caption("🔍 Le contenu final sera plus détaillé")
         else:
             st.info("💡 Remplissez les champs pour voir un aperçu")
@@ -180,6 +264,10 @@ if len(st.session_state.cart) >= 3:
     with col_offre2:
         if st.button("📦 Profiter de l'offre", use_container_width=True):
             st.info("Ajoutez 2 produits supplémentaires pour activer l'offre !")
+else:
+    # Message pour encourager l'achat groupé
+    if len(st.session_state.cart) > 0:
+        st.info(f"💡 Ajoutez {3 - len(st.session_state.cart)} produit(s) supplémentaire(s) pour profiter d'une offre groupée !")
 
 # ============================================
 # PANIER ET PAIEMENT
@@ -197,12 +285,12 @@ if st.session_state.cart:
             col1, col2, col3, col4 = st.columns([3, 1, 1, 0.3])
             with col1:
                 st.write(f"**{item['nom']}**")
-                st.caption(f"🎯 {item.get('ton', 'Professionnel')}")
+                st.caption(f"🎯 {item.get('ton', 'Professionnel')} | 📏 {item.get('longueur', 'Moyenne')}")
             with col2:
                 st.write(f"{item['prix']:.2f}€")
             with col3:
                 if st.button("📝 Modifier", key=f"edit_{i}"):
-                    st.session_state.preview_mode = True
+                    st.info("Supprimez et ré-ajoutez le produit pour le modifier")
             with col4:
                 if st.button("✕", key=f"remove_{i}"):
                     st.session_state.cart.pop(i)
@@ -214,7 +302,13 @@ if st.session_state.cart:
     col_total1, col_total2, col_total3 = st.columns([2, 1, 1])
     
     with col_total1:
-        st.write(f"**Total : {total:.2f}€**")
+        # Appliquer la réduction si 5 produits
+        if quantity >= 5:
+            total = 4.50
+            st.write(f"**Total avec réduction : {total:.2f}€**")
+            st.caption(f"💰 Économie de {quantity * 0.99 - 4.50:.2f}€")
+        else:
+            st.write(f"**Total : {total:.2f}€**")
         st.caption(f"{quantity} fiche(s) dans votre panier")
         
         # Badge de confiance
@@ -229,6 +323,12 @@ if st.session_state.cart:
             try:
                 st.session_state.payment_processing = True
                 
+                # Calcul du prix total avec réduction
+                if quantity >= 5:
+                    total_price = 4.50
+                else:
+                    total_price = total
+                
                 # Créer la session Stripe
                 checkout_session = stripe.checkout.Session.create(
                     payment_method_types=['card'],
@@ -242,7 +342,8 @@ if st.session_state.cart:
                     metadata={
                         'products': json.dumps([item['nom'] for item in st.session_state.cart]),
                         'user_id': st.session_state.get('user_id', 'anonymous'),
-                        'generations': str(st.session_state.generations)
+                        'generations': str(st.session_state.generations),
+                        'total_items': str(quantity)
                     }
                 )
                 
@@ -289,7 +390,11 @@ if st.session_state.cart:
     
     with col_total3:
         st.caption("🔒 Paiement sécurisé par Stripe")
-        st.image("https://stripe.com/img/v3/home/twitter.png", width=100)
+        st.markdown("""
+        <div style="background: #6772e5; padding: 8px; border-radius: 4px; text-align: center; color: white; font-weight: bold; font-size: 14px;">
+            STRIPE
+        </div>
+        """, unsafe_allow_html=True)
 
 # ============================================
 # TRAITEMENT APRÈS PAIEMENT
@@ -335,11 +440,13 @@ if st.query_params.get("payment") == "success":
                     "nom": item['nom'],
                     "contenu": response.text,
                     "prix": 0.99,
-                    "date": datetime.now().strftime("%d/%m/%Y"),
-                    "ton": item.get('ton', 'Professionnel')
+                    "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "ton": item.get('ton', 'Professionnel'),
+                    "longueur": item.get('longueur', 'Moyenne')
                 })
                 st.session_state.generations += 1
                 st.session_state.total_spent += 0.99
+                st.session_state.daily_generations += 1
                 sauvegarder_session()
                 
             except Exception as e:
@@ -347,10 +454,26 @@ if st.query_params.get("payment") == "success":
                 # Ajouter une fiche par défaut
                 st.session_state.generated_products.append({
                     "nom": item['nom'],
-                    "contenu": f"**{item['nom']}**\n\nFiche produit générée avec succès.\n\n{item['caracteristiques']}",
+                    "contenu": f"""**{item['nom']}** - Fiche produit
+
+📝 **Description** : {item['nom']} - {item['caracteristiques']}
+
+✨ **Avantages** :
+• Qualité premium
+• Design élégant
+• Durabilité exceptionnelle
+
+🔧 **Caractéristiques** : {item['caracteristiques']}
+
+💰 **Prix conseillé** : À définir
+
+📌 **Meta-description** : {item['nom']} - {item['caracteristiques'][:100]}""",
                     "prix": 0.99,
-                    "date": datetime.now().strftime("%d/%m/%Y")
+                    "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "ton": item.get('ton', 'Professionnel')
                 })
+                st.session_state.generations += 1
+                st.session_state.total_spent += 0.99
         
         status_text.text("✅ Toutes les fiches ont été générées !")
         st.session_state.cart = []
@@ -367,55 +490,98 @@ if st.session_state.generated_products:
     st.divider()
     st.subheader("📦 Mes fiches produits")
     
-    col_stats1, col_stats2, col_stats3 = st.columns(3)
+    col_stats1, col_stats2, col_stats3, col_stats4 = st.columns(4)
     with col_stats1:
         st.metric("📄 Total fiches", len(st.session_state.generated_products))
     with col_stats2:
         total_valeur = len(st.session_state.generated_products) * 0.99
         st.metric("💰 Valeur totale", f"{total_valeur:.2f}€")
     with col_stats3:
-        st.metric("📅 Dernière génération", st.session_state.generated_products[-1].get('date', 'Aujourd\'hui'))
+        st.metric("📅 Dernière génération", st.session_state.generated_products[-1].get('date', 'Aujourd\'hui')[:10])
+    with col_stats4:
+        st.metric("🎯 Dernier ton", st.session_state.generated_products[-1].get('ton', 'N/A'))
     
-    for i, product in enumerate(st.session_state.generated_products):
-        with st.expander(f"📄 {product['nom']} - {product.get('date', '')}"):
+    # Recherche et filtres
+    col_search1, col_search2 = st.columns([3, 1])
+    with col_search1:
+        search_term = st.text_input("🔍 Rechercher une fiche", placeholder="Entrez un nom de produit...")
+    with col_search2:
+        filter_ton = st.selectbox("🎯 Filtrer par ton", ["Tous", "Professionnel", "Chaleureux", "Luxe", "Minimaliste", "Dynamique"])
+    
+    # Filtrer les produits
+    filtered_products = st.session_state.generated_products
+    if search_term:
+        filtered_products = [p for p in filtered_products if search_term.lower() in p['nom'].lower()]
+    if filter_ton != "Tous":
+        filtered_products = [p for p in filtered_products if p.get('ton', 'Professionnel') == filter_ton]
+    
+    for i, product in enumerate(filtered_products):
+        # Trouver l'index réel dans la liste complète
+        real_index = st.session_state.generated_products.index(product)
+        with st.expander(f"📄 {product['nom']} - {product.get('date', '')} 🎯 {product.get('ton', 'Professionnel')}"):
             st.markdown(product['contenu'])
             
-            col_actions1, col_actions2, col_actions3 = st.columns(3)
+            col_actions1, col_actions2, col_actions3, col_actions4 = st.columns(4)
             with col_actions1:
-                if st.button("📋 Copier", key=f"copy_{i}"):
-                    st.info("Copié dans le presse-papiers !")
+                if st.button("📋 Copier", key=f"copy_{real_index}"):
+                    st.success("📋 Copié dans le presse-papiers ! (Fonctionnalité à implémenter)")
             with col_actions2:
-                if st.button("🔄 Régénérer", key=f"regenerate_{i}"):
-                    st.info("Fonctionnalité à venir")
+                if st.button("📥 Télécharger TXT", key=f"download_{real_index}"):
+                    st.download_button(
+                        label="Télécharger",
+                        data=product['contenu'],
+                        file_name=f"{product['nom']}_fiche.txt",
+                        mime="text/plain",
+                        key=f"download_btn_{real_index}"
+                    )
             with col_actions3:
-                if st.button("🗑️ Supprimer", key=f"del_{i}"):
-                    st.session_state.generated_products.pop(i)
+                if st.button("🔄 Régénérer", key=f"regenerate_{real_index}"):
+                    st.info("🔄 Fonctionnalité à venir")
+            with col_actions4:
+                if st.button("🗑️ Supprimer", key=f"del_{real_index}"):
+                    st.session_state.generated_products.pop(real_index)
                     sauvegarder_session()
                     st.rerun()
     
     # Export
-    col_export1, col_export2 = st.columns(2)
+    st.divider()
+    col_export1, col_export2, col_export3 = st.columns(3)
     with col_export1:
         if st.button("📥 Exporter tout en JSON", use_container_width=True):
             export_data = {
                 "products": st.session_state.generated_products,
                 "generated_at": datetime.now().isoformat(),
-                "total_generations": st.session_state.generations
+                "total_generations": st.session_state.generations,
+                "total_spent": st.session_state.total_spent
             }
             st.download_button(
                 label="Télécharger JSON",
                 data=json.dumps(export_data, indent=2, ensure_ascii=False),
-                file_name=f"fiches_{datetime.now().strftime('%Y%m%d')}.json",
+                file_name=f"fiches_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
                 mime="application/json",
                 use_container_width=True
             )
     with col_export2:
+        if st.button("📊 Exporter en CSV", use_container_width=True):
+            # Créer un CSV simple
+            csv_data = "Nom,Date,Ton,Longueur\n"
+            for p in st.session_state.generated_products:
+                csv_data += f"{p['nom']},{p.get('date', '')},{p.get('ton', '')},{p.get('longueur', '')}\n"
+            st.download_button(
+                label="Télécharger CSV",
+                data=csv_data,
+                file_name=f"fiches_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+    with col_export3:
         if st.button("🔄 Réinitialiser tout", use_container_width=True):
-            st.session_state.generated_products = []
-            st.session_state.generations = 0
-            st.session_state.total_spent = 0
-            sauvegarder_session()
-            st.rerun()
+            if st.checkbox("Confirmer la suppression de toutes les fiches ?"):
+                st.session_state.generated_products = []
+                st.session_state.generations = 0
+                st.session_state.total_spent = 0
+                sauvegarder_session()
+                st.rerun()
 
 # ============================================
 # EXEMPLE DE FICHE
@@ -461,22 +627,39 @@ with col_tem2:
 with col_tem3:
     st.info("⭐⭐⭐⭐⭐ *'Les fiches sont bien optimisées SEO, mes ventes ont augmenté.'* - Sophie R.")
 
+# FAQ
+with st.expander("❓ Foire Aux Questions"):
+    st.markdown("""
+    **Comment fonctionne la génération ?**  
+    L'IA analyse votre produit et rédige une fiche professionnelle en quelques secondes.
+    
+    **Le paiement est-il sécurisé ?**  
+    Oui, tous les paiements sont sécurisés par Stripe.
+    
+    **Puis-je modifier la fiche générée ?**  
+    Oui, vous pouvez copier le contenu et l'adapter selon vos besoins.
+    
+    **Que se passe-t-il après le paiement ?**  
+    Vos fiches sont générées automatiquement et sauvegardées dans votre session.
+    """)
+
 # ============================================
 # PIED DE PAGE
 # ============================================
 st.divider()
-col_footer1, col_footer2, col_footer3 = st.columns(3)
+col_footer1, col_footer2, col_footer3, col_footer4 = st.columns(4)
 with col_footer1:
     st.caption("🤖 Généré avec ❤️ par l'IA")
 with col_footer2:
     st.caption(f"📊 {st.session_state.generations} fiches créées")
 with col_footer3:
     st.caption("🔒 Tous les paiements sont sécurisés")
+with col_footer4:
+    st.caption(f"📅 {datetime.now().strftime('%d/%m/%Y')}")
 
 # ============================================
 # SAUVEGARDE AUTOMATIQUE
 # ============================================
-# Sauvegarde automatique toutes les 5 minutes
 if "last_backup" not in st.session_state:
     st.session_state.last_backup = time.time()
 
