@@ -53,14 +53,12 @@ if "daily_generations" not in st.session_state:
     st.session_state.daily_generations = 0
 if "promo_badge" not in st.session_state:
     promotions = [
-        "🎁 10% de réduction sur votre première commande !",
-        "⭐ Offre spéciale : 5 fiches pour le prix de 4 !",
         "🔥 Promotion : 3 fiches achetées, 1 offerte !",
+        "⭐ Offre spéciale : 5 fiches pour le prix de 4 !",
+        "🎁 10% de réduction sur votre première commande !",
         "💎 Premium : Fiches optimisées SEO incluses !"
     ]
     st.session_state.promo_badge = random.choice(promotions)
-if "clear_form" not in st.session_state:
-    st.session_state.clear_form = False
 if "form_nom" not in st.session_state:
     st.session_state.form_nom = ""
 if "form_carac" not in st.session_state:
@@ -96,7 +94,6 @@ def generer_apercu(nom, caracteristiques, ton="Professionnel", longueur="Moyenne
     if not nom or not caracteristiques:
         return None
     
-    # Déterminer le style selon le ton
     styles = {
         "Professionnel": {
             "style": "professionnel et élégant",
@@ -127,12 +124,11 @@ def generer_apercu(nom, caracteristiques, ton="Professionnel", longueur="Moyenne
     
     style_info = styles.get(ton, styles["Professionnel"])
     
-    # Ajuster la longueur de l'aperçu
     if longueur == "Courte":
         description = f"Découvrez {nom}, alliant qualité et {style_info['style']}."
     elif longueur == "Détaillée":
         description = f"Découvrez {nom}, alliant qualité et {style_info['style']}. Conçu avec soin pour répondre à vos besoins quotidiens. Un produit qui saura vous séduire par sa finition et sa praticité."
-    else:  # Moyenne
+    else:
         description = f"Découvrez {nom}, alliant qualité et {style_info['style']}. Conçu avec soin pour répondre à vos besoins quotidiens."
     
     avantages_liste = "\n".join([f"• {avantage}" for avantage in style_info["avantages"]])
@@ -184,10 +180,8 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# Titre principal
 st.title("🛍️ Créez votre fiche produit en 1 minute")
 
-# Bannière de confiance
 st.markdown("""
 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
             padding: 15px; border-radius: 10px; color: white; margin: 10px 0;">
@@ -200,7 +194,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Statistiques
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.metric("📝 Fiches créées", st.session_state.generations)
@@ -213,7 +206,7 @@ with col4:
     st.metric("📊 Taux de conversion", f"{taux_conversion}%", delta="+5%")
 
 # ============================================
-# FORMULAIRE PRODUIT AVEC APERÇU
+# FORMULAIRE PRODUIT
 # ============================================
 st.subheader("📝 Nouvelle fiche produit")
 
@@ -235,7 +228,6 @@ with st.container(border=True):
             key="input_carac"
         )
         
-        # Options avancées
         with st.expander("⚙️ Options avancées", expanded=False):
             col_opt1, col_opt2 = st.columns(2)
             with col_opt1:
@@ -264,7 +256,6 @@ with st.container(border=True):
                 key="input_include_pricing"
             )
         
-        # Mettre à jour les valeurs du formulaire
         st.session_state.form_nom = nom_produit
         st.session_state.form_carac = caracteristiques
         st.session_state.form_ton = ton
@@ -276,7 +267,6 @@ with st.container(border=True):
         with col_btn1:
             if st.button("➕ Ajouter au panier", type="secondary", use_container_width=True):
                 if nom_produit and caracteristiques:
-                    # Vérifier si le produit est déjà dans le panier
                     existing = [p for p in st.session_state.cart if p['nom'].lower() == nom_produit.lower()]
                     if existing:
                         st.warning(f"⚠️ {nom_produit} est déjà dans votre panier !")
@@ -293,7 +283,6 @@ with st.container(border=True):
                         sauvegarder_session()
                         st.success(f"✅ {nom_produit} ajouté au panier !")
                         st.balloons()
-                        # Réinitialiser les champs du formulaire
                         st.session_state.form_nom = ""
                         st.session_state.form_carac = ""
                         st.session_state.form_mots_cles = ""
@@ -346,7 +335,6 @@ if st.session_state.cart:
     
     quantity = len(st.session_state.cart)
     
-    # Affichage du panier
     for i, item in enumerate(st.session_state.cart):
         with st.container(border=True):
             col1, col2, col3, col4 = st.columns([3, 1, 1, 0.3])
@@ -369,7 +357,6 @@ if st.session_state.cart:
                     sauvegarder_session()
                     st.rerun()
     
-    # Total et paiement
     st.divider()
     
     total, reduction_message = calculer_total_avec_reduction(st.session_state.cart)
@@ -385,11 +372,12 @@ if st.session_state.cart:
             st.write(f"**Total : {total:.2f}€**")
             st.caption(f"{quantity} fiche(s) dans votre panier")
         
-        # Badge de confiance
+        # Badge de confiance SANS remboursement
         st.markdown("""
-        <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 12px; color: #666; border-left: 4px solid #28a745;">
-            ✅ Satisfait ou remboursé sous 7 jours<br>
-            💬 Support client 24/7
+        <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 12px; color: #666; border-left: 4px solid #6772e5;">
+            💬 Support client 24/7<br>
+            🔒 Paiement 100% sécurisé<br>
+            📝 Fiches générées instantanément
         </div>
         """, unsafe_allow_html=True)
     
@@ -398,7 +386,6 @@ if st.session_state.cart:
             try:
                 st.session_state.payment_processing = True
                 
-                # Créer la session Stripe
                 checkout_session = stripe.checkout.Session.create(
                     payment_method_types=['card'],
                     line_items=[{
@@ -417,7 +404,6 @@ if st.session_state.cart:
                     }
                 )
                 
-                # Redirection élégante
                 stripe_url = checkout_session.url
                 
                 st.markdown(f'''
@@ -487,7 +473,6 @@ if st.query_params.get("payment") == "success":
             progress_bar.progress((idx + 1) / len(st.session_state.cart))
             
             try:
-                # Construction du prompt personnalisé
                 longueur_guide = {
                     "Courte": "100 mots",
                     "Moyenne": "150 mots",
@@ -536,7 +521,6 @@ if st.query_params.get("payment") == "success":
                 
             except Exception as e:
                 st.error(f"❌ Erreur pour {item['nom']} : {e}")
-                # Ajouter une fiche par défaut
                 st.session_state.generated_products.append({
                     "nom": item['nom'],
                     "contenu": f"""**{item['nom']}** - Fiche produit
@@ -589,14 +573,12 @@ if st.session_state.generated_products:
     with col_stats4:
         st.metric("🎯 Dernier ton", st.session_state.generated_products[-1].get('ton', 'N/A'))
     
-    # Recherche et filtres
     col_search1, col_search2 = st.columns([3, 1])
     with col_search1:
         search_term = st.text_input("🔍 Rechercher une fiche", placeholder="Entrez un nom de produit...")
     with col_search2:
         filter_ton = st.selectbox("🎯 Filtrer par ton", ["Tous", "Professionnel", "Chaleureux", "Luxe", "Minimaliste", "Dynamique"])
     
-    # Filtrer les produits
     filtered_products = st.session_state.generated_products
     if search_term:
         filtered_products = [p for p in filtered_products if search_term.lower() in p['nom'].lower()]
@@ -630,7 +612,6 @@ if st.session_state.generated_products:
                         sauvegarder_session()
                         st.rerun()
         
-        # Export
         st.divider()
         col_export1, col_export2, col_export3 = st.columns(3)
         with col_export1:
@@ -736,6 +717,9 @@ with st.expander("❓ Foire Aux Questions"):
     
     **Y a-t-il des réductions pour les gros volumes ?**  
     Oui ! 3 fiches = 10% de réduction, 5 fiches = 4,50€.
+    
+    **Puis-je voir un aperçu avant d'acheter ?**  
+    Oui, l'aperçu s'affiche en temps réel pendant que vous remplissez les champs.
     """)
 
 # ============================================
@@ -758,6 +742,6 @@ with col_footer4:
 if "last_backup" not in st.session_state:
     st.session_state.last_backup = time.time()
 
-if time.time() - st.session_state.last_backup > 300:  # 5 minutes
+if time.time() - st.session_state.last_backup > 300:
     sauvegarder_session()
-   
+    st.session_state.last_backup = time.time()
