@@ -825,4 +825,4 @@ with st.expander("📋 Exemple de fiche produit"):
     **👜 Sac à Main en Cuir Véritable - Élégance Intemporelle**
     
     📝 **Description** : 
-    Découvrez notre sac à main en cuir véritable, alliant l'artisanat traditionnel à
+    Découvrez notre sac à main en cuir véritable, alliant l'artisanat traditionnel à un design contemporain. Fabri
