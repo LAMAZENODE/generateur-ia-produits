@@ -356,7 +356,7 @@ st.markdown(f"""
 # ============================================
 col_title, col_cart_icon = st.columns([4, 1])
 with col_title:
-    st.title("🛍️ Fiche Produit IA")
+    st.title("🛍️ Fiche Produit ")
     st.caption("Générez des fiches produits professionnelles en 30 secondes")
 with col_cart_icon:
     if len(st.session_state.cart) > 0:
