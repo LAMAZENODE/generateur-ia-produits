@@ -249,4 +249,14 @@ if user_email:
                     if "Arabe" in prod['langue'] or "🇸🇦" in prod['langue']:
                         st.markdown(f'<div style="direction: rtl; text-align: right;">{prod["contenu"]}</div>', unsafe_allow_html=True)
                     else:
-                        st.markdown(prod['contenu']
+                        st.markdown(prod['contenu'])
+
+
+
+
+
+
+
+       
+
+
