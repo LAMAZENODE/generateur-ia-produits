@@ -192,6 +192,7 @@ TEXTES = {
         "paiement_ok": "🎉 Paiement confirmé ! Complétez le formulaire pour générer votre fiche.",
         "pdf_bouton": "📄 Télécharger en PDF",
         "surcharge": "⏳ Le service est momentanément surchargé. Merci de réessayer dans 1 à 2 minutes. Votre essai gratuit n'a **pas** été consommé.",
+        "aucun_modele": "❌ Aucun modèle Gemini disponible pour votre clé API. Vérifiez vos secrets.",
     },
     "Anglais 🇬🇧": {
         "promo": "🎁 Your 1st sheet 100% Free · Then Flash offer: 5 sheets for the price of 4!",
@@ -234,6 +235,7 @@ TEXTES = {
         "paiement_ok": "🎉 Payment confirmed! Complete the form to generate your sheet.",
         "pdf_bouton": "📄 Download PDF",
         "surcharge": "⏳ The service is temporarily overloaded. Please try again in 1-2 minutes. Your free trial was **not** consumed.",
+        "aucun_modele": "❌ No Gemini model available for your API key. Check your secrets.",
     },
     "Espagnol 🇪🇸": {
         "promo": "🎁 ¡Tu 1ª ficha 100% Gratis · Oferta flash: 5 fichas por el precio de 4!",
@@ -276,6 +278,7 @@ TEXTES = {
         "paiement_ok": "🎉 ¡Pago confirmado! Completa el formulario para generar tu ficha.",
         "pdf_bouton": "📄 Descargar PDF",
         "surcharge": "⏳ El servicio está temporalmente sobrecargado. Inténtalo de nuevo en 1-2 minutos. Tu prueba gratuita **no** se ha consumido.",
+        "aucun_modele": "❌ Ningún modelo Gemini disponible para tu clave API. Verifica tus secretos.",
     },
 }
 
@@ -303,6 +306,50 @@ try:
 except Exception as e:
     st.error(f"❌ Erreur API Gemini : {e}")
     st.stop()
+
+# ============================================
+# 🤖 AUTO-DÉCOUVERTE DES MODÈLES DISPONIBLES
+# ============================================
+@st.cache_resource(show_spinner=False)
+def obtenir_modeles_disponibles():
+    """
+    Récupère dynamiquement la liste des modèles qui supportent generateContent.
+    Triés par préférence : flash > pro, puis 2.5 > 2.0 > 1.5.
+    """
+    try:
+        noms = []
+        for m in client.models.list():
+            methods = (
+                getattr(m, "supported_generation_methods", None)
+                or getattr(m, "supported_actions", [])
+                or []
+            )
+            # Certaines versions du SDK exposent les méthodes sous forme d'enum
+            methods_str = [str(x) for x in methods]
+            if any("generateContent" in s for s in methods_str):
+                nom_propre = m.name.replace("models/", "")
+                noms.append(nom_propre)
+
+        if not noms:
+            return []
+
+        # Tri par préférence
+        def cle_tri(x):
+            return (
+                "flash" not in x,        # flash d'abord (False < True)
+                "latest" not in x,       # "latest" d'abord
+                "2.5" not in x,          # 2.5 > 2.0 > 1.5
+                "2.0" not in x,
+                "1.5" not in x,
+                x,
+            )
+
+        noms.sort(key=cle_tri)
+        return noms
+
+    except Exception as e:
+        st.warning(f"⚠️ Impossible de lister les modèles : {e}")
+        return []
 
 # ============================================
 # UTILISATEURS (fichier JSON local)
@@ -347,7 +394,7 @@ if "cache_fiche" not in st.session_state:
     st.session_state.cache_fiche = {}
 
 # ============================================
-# 🤖 GÉNÉRATION IA (AVEC RETRY + FALLBACK)
+# 🤖 GÉNÉRATION IA (AUTO-DÉCOUVERTE + RETRY)
 # ============================================
 def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     prompt = f"""
@@ -362,26 +409,30 @@ def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     Structure: Titre accrocheur, intro bénéfices, liste avantages, appel à l'action.
     """
 
-    # Plusieurs modèles en secours, du plus récent au plus stable
-    modeles = [
-        'gemini-2.0-flash',
-        'gemini-2.0-flash-lite',
-        'gemini-1.5-flash',
-        'gemini-1.5-flash-8b',
-    ]
+    modeles = obtenir_modeles_disponibles()
+
+    if not modeles:
+        return "❌ Erreur : aucun modèle Gemini disponible pour votre clé API."
+
+    # On teste les 5 meilleurs modèles
+    modeles_a_tester = modeles[:5]
     derniere_erreur = None
 
-    for mod in modeles:
-        for tentative in range(2):  # 2 essais par modèle
+    for mod in modeles_a_tester:
+        for tentative in range(2):
             try:
                 response = client.models.generate_content(model=mod, contents=prompt)
                 if response and response.text:
                     return response.text
             except Exception as e:
                 derniere_erreur = str(e)
-                # Si erreur 503, on attend un peu avant de réessayer
+                # 404 → modèle inexistant, on passe au suivant immédiatement
+                if "404" in derniere_erreur or "NOT_FOUND" in derniere_erreur:
+                    break
+                # 503 → surcharge, on attend puis on retente
                 if "503" in derniere_erreur or "UNAVAILABLE" in derniere_erreur:
                     time.sleep(2)
+                # Autres erreurs : on passe au modèle suivant
                 continue
 
     return f"❌ Erreur : {derniere_erreur}"
@@ -527,7 +578,6 @@ if user_email:
                         st.error(f"{T['paiement_erreur']} {str(e)}")
                 else:
                     # ---- GÉNÉRATION (gratuite OU payée) ----
-                    # Cache pour éviter les appels API redondants
                     cle_cache = f"{nom_produit}|{caracs}|{ton_choisi}|{longueur_choisie}|{langue_choisie}|{mots_cles}"
 
                     if cle_cache in st.session_state.cache_fiche:
@@ -542,7 +592,6 @@ if user_email:
                                 st.session_state.cache_fiche[cle_cache] = fiche_finale
 
                     if "❌" not in fiche_finale:
-                        # Marquer l'essai comme utilisé si c'était gratuit
                         if not deja_utilise:
                             enregistrer_utilisateur(user_email, a_utilise_essai=True)
 
@@ -557,9 +606,10 @@ if user_email:
                         })
                         st.success(T["genere_ok"])
                     else:
-                        # Message clair si surcharge API
                         if "503" in fiche_finale or "UNAVAILABLE" in fiche_finale:
                             st.warning(T["surcharge"])
+                        elif "404" in fiche_finale or "NOT_FOUND" in fiche_finale or "aucun modèle" in fiche_finale.lower():
+                            st.error(T["aucun_modele"])
                         else:
                             st.error(fiche_finale)
 
@@ -608,7 +658,6 @@ if user_email:
                     unsafe_allow_html=True
                 )
 
-            # 📄 Bouton PDF
             try:
                 pdf_bytes = generer_pdf(
                     st.session_state.current_result,
