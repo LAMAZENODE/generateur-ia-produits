@@ -32,22 +32,31 @@ if query_params.get("payment") == "success":
         st.session_state.emails_payes.append(email_paye)
 
 # ============================================
-# 🎨 CSS MODERNE
+# 🎨 CSS MODERNE — THÈME VIOLET CLAIR
 # ============================================
 st.markdown("""
 <style>
+    /* ===== FOND GÉNÉRAL : VIOLET CLAIR ===== */
     .stApp {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        background: linear-gradient(135deg, #c7d2fe 0%, #d8b4fe 50%, #e9d5ff 100%);
         background-attachment: fixed;
         min-height: 100vh;
     }
+
+    /* ===== CARTE PRINCIPALE ===== */
     .main .block-container {
-        background: rgba(255, 255, 255, 0.97);
+        background: rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(6px);
         border-radius: 20px;
         padding: 2rem;
         margin-top: 1rem;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        margin-bottom: 2rem;
+        max-width: 1100px;
+        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.6);
     }
+
+    /* ===== TITRES ===== */
     h1 {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
@@ -55,55 +64,94 @@ st.markdown("""
         background-clip: text;
         font-weight: 800 !important;
     }
-    h2, h3 { color: #333 !important; font-weight: 700 !important; }
+    h2, h3 {
+        color: #4c1d95 !important;
+        font-weight: 700 !important;
+    }
+
+    /* ===== TEXTES GÉNÉRAUX ===== */
+    .stApp p, .stApp label, .stApp span, .stApp div {
+        color: #3b0764;
+    }
+    .stApp .stCaption, .stApp small {
+        color: #6b21a8 !important;
+    }
+
+    /* ===== BOUTONS ===== */
     .stButton button {
         border-radius: 12px !important;
         padding: 14px !important;
         font-size: 16px !important;
         font-weight: 700 !important;
         width: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%) !important;
         color: white !important;
         border: none !important;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.45);
         transition: all 0.3s ease;
     }
     .stButton button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        box-shadow: 0 8px 25px rgba(124, 58, 237, 0.65);
     }
+
+    /* ===== LIEN BOUTON ===== */
     .stLinkButton a {
         display: block !important;
         text-align: center !important;
         padding: 16px !important;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%) !important;
         color: white !important;
         border-radius: 12px !important;
         text-decoration: none !important;
         font-weight: 700 !important;
         width: 100% !important;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.45);
     }
+
+    /* ===== CHAMPS DE SAISIE ===== */
     .stTextInput input, .stTextArea textarea {
         font-size: 16px !important;
         padding: 12px !important;
         border-radius: 10px !important;
-        border: 2px solid #e0e0e0 !important;
+        border: 2px solid #c4b5fd !important;
+        background: #ffffff !important;
+        color: #3b0764 !important;
     }
     .stTextInput input:focus, .stTextArea textarea:focus {
-        border-color: #667eea !important;
+        border-color: #7c3aed !important;
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2) !important;
     }
+
+    /* ===== SELECTBOX ===== */
+    .stSelectbox div[data-baseweb="select"] > div {
+        background: #ffffff !important;
+        border-radius: 10px !important;
+        border: 2px solid #c4b5fd !important;
+        color: #3b0764 !important;
+    }
+
+    /* ===== MÉTRIQUES ===== */
     .stMetric {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        background: rgba(255, 255, 255, 0.9);
         padding: 20px 15px;
         border-radius: 15px;
         text-align: center;
-        border: 1px solid #e0e0e0;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        border: 1px solid #c4b5fd;
+        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.15);
     }
-    .stMetric label { color: #666 !important; font-weight: 600 !important; }
+    .stMetric label {
+        color: #6b21a8 !important;
+        font-weight: 600 !important;
+    }
+    .stMetric [data-testid="stMetricValue"] {
+        color: #3b0764 !important;
+        font-weight: 800 !important;
+    }
+
+    /* ===== BADGE PROMO ===== */
     .promo-badge {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
         color: white;
         padding: 16px 20px;
         border-radius: 12px;
@@ -111,22 +159,27 @@ st.markdown("""
         font-weight: 700;
         margin-bottom: 25px;
         font-size: 16px;
-        box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
+        box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
     }
+
+    /* ===== BOÎTE RÉSULTAT ===== */
     .result-box {
-        background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+        background: rgba(255, 255, 255, 0.95);
         padding: 25px;
         border-radius: 15px;
-        border-left: 5px solid #667eea;
+        border-left: 5px solid #7c3aed;
         margin-top: 20px;
         white-space: pre-line;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
+        color: #3b0764;
+        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.15);
     }
+
+    /* ===== BOÎTE PAIEMENT ===== */
     .payment-box {
-        background: linear-gradient(135deg, #f0f4ff 0%, #e8efff 100%);
+        background: rgba(255, 255, 255, 0.95);
         padding: 25px;
         border-radius: 15px;
-        border: 2px solid #667eea;
+        border: 2px solid #7c3aed;
         margin-top: 20px;
         text-align: center;
     }
@@ -134,15 +187,26 @@ st.markdown("""
         display: block;
         text-align: center;
         padding: 16px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
         color: white !important;
         border-radius: 12px;
         text-decoration: none;
         font-weight: 700;
         margin: 15px 0;
     }
+
+    /* ===== ALERTES ===== */
+    div[data-testid="stAlert"] {
+        border-radius: 12px;
+    }
+
+    /* ===== RESPONSIVE MOBILE ===== */
     @media (max-width: 768px) {
-        .main .block-container { padding: 1rem; border-radius: 15px; }
+        .main .block-container {
+            padding: 1rem;
+            border-radius: 15px;
+            margin: 0.5rem;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -324,7 +388,6 @@ def obtenir_modeles_disponibles():
                 or getattr(m, "supported_actions", [])
                 or []
             )
-            # Certaines versions du SDK exposent les méthodes sous forme d'enum
             methods_str = [str(x) for x in methods]
             if any("generateContent" in s for s in methods_str):
                 nom_propre = m.name.replace("models/", "")
@@ -333,12 +396,11 @@ def obtenir_modeles_disponibles():
         if not noms:
             return []
 
-        # Tri par préférence
         def cle_tri(x):
             return (
-                "flash" not in x,        # flash d'abord (False < True)
-                "latest" not in x,       # "latest" d'abord
-                "2.5" not in x,          # 2.5 > 2.0 > 1.5
+                "flash" not in x,
+                "latest" not in x,
+                "2.5" not in x,
                 "2.0" not in x,
                 "1.5" not in x,
                 x,
@@ -414,7 +476,6 @@ def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     if not modeles:
         return "❌ Erreur : aucun modèle Gemini disponible pour votre clé API."
 
-    # On teste les 5 meilleurs modèles
     modeles_a_tester = modeles[:5]
     derniere_erreur = None
 
@@ -426,13 +487,10 @@ def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
                     return response.text
             except Exception as e:
                 derniere_erreur = str(e)
-                # 404 → modèle inexistant, on passe au suivant immédiatement
                 if "404" in derniere_erreur or "NOT_FOUND" in derniere_erreur:
                     break
-                # 503 → surcharge, on attend puis on retente
                 if "503" in derniere_erreur or "UNAVAILABLE" in derniere_erreur:
                     time.sleep(2)
-                # Autres erreurs : on passe au modèle suivant
                 continue
 
     return f"❌ Erreur : {derniere_erreur}"
@@ -515,7 +573,6 @@ if user_email:
     else:
         db_utilisateurs = charger_utilisateurs()
         deja_utilise = user_email in db_utilisateurs and db_utilisateurs[user_email].get("a_utilise_essai", False)
-
         email_deja_paye = user_email in st.session_state.emails_payes
 
         if not deja_utilise:
@@ -561,7 +618,6 @@ if user_email:
                 st.warning(T["remplir_champs"])
             else:
                 if est_payant:
-                    # ---- PAIEMENT STRIPE ----
                     try:
                         locale_stripe = LOCALES_STRIPE.get(langue_interface, "auto")
                         session_stripe = stripe.checkout.Session.create(
@@ -577,7 +633,6 @@ if user_email:
                     except Exception as e:
                         st.error(f"{T['paiement_erreur']} {str(e)}")
                 else:
-                    # ---- GÉNÉRATION (gratuite OU payée) ----
                     cle_cache = f"{nom_produit}|{caracs}|{ton_choisi}|{longueur_choisie}|{langue_choisie}|{mots_cles}"
 
                     if cle_cache in st.session_state.cache_fiche:
