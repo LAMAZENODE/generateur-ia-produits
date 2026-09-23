@@ -736,4 +736,26 @@ if user_email:
                     st.session_state.current_result,
                     st.session_state.current_nom_produit or "produit"
                 )
-                nom_fichier = f"fiche_{(st.session_state
+
+                nom_base = st.session_state.current_nom_produit or "produit"
+                nom_fichier = "fiche_" + nom_base.replace(" ", "_") + ".pdf"
+
+                st.download_button(
+                    label=T["pdf_bouton"],
+                    data=pdf_bytes,
+                    file_name=nom_fichier,
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+            except Exception as e:
+                st.warning(f"PDF indisponible : {e}")
+
+        # ============================================
+        # HISTORIQUE
+        # ============================================
+        if st.session_state.generated_products:
+            st.write("---")
+            st.markdown(f"### {T['historique']}")
+            for prod in reversed(st.session_state.generated_products):
+                with st.expander(f"📦 {prod['nom']} ({prod['langue']}) - {prod['date']}"):
+                    st.markdown(prod['contenu'])
