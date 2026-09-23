@@ -4,8 +4,8 @@ import json
 import os
 import re
 import stripe
-import time
 from datetime import datetime
+from fpdf import FPDF
 
 # ============================================
 # CONFIGURATION DE LA PAGE
@@ -18,18 +18,28 @@ st.set_page_config(
 )
 
 # ============================================
-# 🎨 CSS MODERNE — FOND DÉGRADÉ + CARTES
+# 🔓 TRAITEMENT DU RETOUR PAIEMENT STRIPE
+# ============================================
+query_params = st.query_params
+
+if "emails_payes" not in st.session_state:
+    st.session_state.emails_payes = []
+
+if query_params.get("payment") == "success":
+    email_paye = query_params.get("email", "")
+    if email_paye and email_paye not in st.session_state.emails_payes:
+        st.session_state.emails_payes.append(email_paye)
+
+# ============================================
+# 🎨 CSS MODERNE
 # ============================================
 st.markdown("""
 <style>
-    /* FOND DÉGRADÉ MODERNE */
     .stApp {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
         background-attachment: fixed;
         min-height: 100vh;
     }
-    
-    /* CONTENEUR PRINCIPAL BLANC QUI FLOTTE */
     .main .block-container {
         background: rgba(255, 255, 255, 0.97);
         border-radius: 20px;
@@ -37,8 +47,6 @@ st.markdown("""
         margin-top: 1rem;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     }
-    
-    /* TITRES AVEC DÉGRADÉ */
     h1 {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
@@ -47,8 +55,6 @@ st.markdown("""
         font-weight: 800 !important;
     }
     h2, h3 { color: #333 !important; font-weight: 700 !important; }
-    
-    /* BOUTONS MODERNES */
     .stButton button {
         border-radius: 12px !important;
         padding: 14px !important;
@@ -65,7 +71,6 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
     }
-    
     .stLinkButton a {
         display: block !important;
         text-align: center !important;
@@ -78,8 +83,6 @@ st.markdown("""
         width: 100% !important;
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
     }
-    
-    /* CHAMPS DE SAISIE */
     .stTextInput input, .stTextArea textarea {
         font-size: 16px !important;
         padding: 12px !important;
@@ -89,8 +92,6 @@ st.markdown("""
     .stTextInput input:focus, .stTextArea textarea:focus {
         border-color: #667eea !important;
     }
-    
-    /* CARTES MÉTRIQUES */
     .stMetric {
         background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
         padding: 20px 15px;
@@ -100,8 +101,6 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
     }
     .stMetric label { color: #666 !important; font-weight: 600 !important; }
-    
-    /* BADGE PROMO ANIMÉ */
     .promo-badge {
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         color: white;
@@ -113,8 +112,6 @@ st.markdown("""
         font-size: 16px;
         box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
     }
-    
-    /* RÉSULTAT */
     .result-box {
         background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
         padding: 25px;
@@ -124,8 +121,6 @@ st.markdown("""
         white-space: pre-line;
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
     }
-    
-    /* BOÎTE PAIEMENT */
     .payment-box {
         background: linear-gradient(135deg, #f0f4ff 0%, #e8efff 100%);
         padding: 25px;
@@ -134,8 +129,6 @@ st.markdown("""
         margin-top: 20px;
         text-align: center;
     }
-    
-    /* BOUTON PAIEMENT FALLBACK */
     .pay-btn {
         display: block;
         text-align: center;
@@ -147,7 +140,6 @@ st.markdown("""
         font-weight: 700;
         margin: 15px 0;
     }
-    
     @media (max-width: 768px) {
         .main .block-container { padding: 1rem; border-radius: 15px; }
     }
@@ -187,7 +179,7 @@ TEXTES = {
         "essai_ok": "🎉 Bonne nouvelle ! Vous bénéficiez d'un **essai gratuit (1 fiche offerte)**.",
         "essai_utilise": "ℹ️ Essai déjà consommé. Prochaines fiches : **0,99€**.",
         "email_invalide": "❌ Veuillez entrer une adresse e-mail valide.",
-        "genere_ok": "✨ Votre fiche gratuite a été générée avec succès !",
+        "genere_ok": "✨ Votre fiche a été générée avec succès !",
         "genere_spinner": "🤖 Génération en cours...",
         "resultat": "✨ Votre fiche produit générée :",
         "historique": "📋 Vos fiches générées",
@@ -196,6 +188,8 @@ TEXTES = {
         "paiement_bouton": "🔒 Payer maintenant 0,99€ sur Stripe",
         "paiement_info": "Paiement 100% sécurisé par Stripe.",
         "paiement_erreur": "❌ Erreur Stripe :",
+        "paiement_ok": "🎉 Paiement confirmé ! Complétez le formulaire pour générer votre fiche.",
+        "pdf_bouton": "📄 Télécharger en PDF",
     },
     "Anglais 🇬🇧": {
         "promo": "🎁 Your 1st sheet 100% Free · Then Flash offer: 5 sheets for the price of 4!",
@@ -226,7 +220,7 @@ TEXTES = {
         "essai_ok": "🎉 Good news! You get a **free trial (1 sheet offered)**.",
         "essai_utilise": "ℹ️ Trial already used. Next sheets: **€0.99**.",
         "email_invalide": "❌ Please enter a valid email address.",
-        "genere_ok": "✨ Your free sheet has been generated successfully!",
+        "genere_ok": "✨ Your sheet has been generated successfully!",
         "genere_spinner": "🤖 Generating...",
         "resultat": "✨ Your generated product sheet:",
         "historique": "📋 Your generated sheets",
@@ -235,6 +229,8 @@ TEXTES = {
         "paiement_bouton": "🔒 Pay now €0.99 on Stripe",
         "paiement_info": "100% secure payment by Stripe.",
         "paiement_erreur": "❌ Stripe error:",
+        "paiement_ok": "🎉 Payment confirmed! Complete the form to generate your sheet.",
+        "pdf_bouton": "📄 Download PDF",
     },
     "Espagnol 🇪🇸": {
         "promo": "🎁 ¡Tu 1ª ficha 100% Gratis · Oferta flash: 5 fichas por el precio de 4!",
@@ -265,7 +261,7 @@ TEXTES = {
         "essai_ok": "🎉 ¡Buenas noticias! Tienes una **prueba gratuita (1 ficha)**.",
         "essai_utilise": "ℹ️ Prueba ya usada. Próximas fichas: **0,99€**.",
         "email_invalide": "❌ Por favor introduce un correo válido.",
-        "genere_ok": "✨ ¡Tu ficha gratuita se ha generado con éxito!",
+        "genere_ok": "✨ ¡Tu ficha se ha generado con éxito!",
         "genere_spinner": "🤖 Generando...",
         "resultat": "✨ Tu ficha de producto generada:",
         "historique": "📋 Tus fichas generadas",
@@ -274,6 +270,8 @@ TEXTES = {
         "paiement_bouton": "🔒 Pagar ahora 0,99€ en Stripe",
         "paiement_info": "Pago 100% seguro por Stripe.",
         "paiement_erreur": "❌ Error de Stripe:",
+        "paiement_ok": "🎉 ¡Pago confirmado! Completa el formulario para generar tu ficha.",
+        "pdf_bouton": "📄 Descargar PDF",
     },
 }
 
@@ -303,7 +301,7 @@ except Exception as e:
     st.stop()
 
 # ============================================
-# UTILISATEURS
+# UTILISATEURS (fichier JSON local)
 # ============================================
 DB_FILE = "utilisateurs.json"
 
@@ -335,13 +333,15 @@ if "generated_products" not in st.session_state:
     st.session_state.generated_products = []
 if "current_result" not in st.session_state:
     st.session_state.current_result = None
+if "current_nom_produit" not in st.session_state:
+    st.session_state.current_nom_produit = ""
 if "user_count" not in st.session_state:
     st.session_state.user_count = 847
 if "payment_url" not in st.session_state:
     st.session_state.payment_url = None
 
 # ============================================
-# 🤖 GÉNÉRATION IA (MODÈLES CORRIGÉS)
+# 🤖 GÉNÉRATION IA
 # ============================================
 def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     prompt = f"""
@@ -355,10 +355,9 @@ def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     Mots-clés: {mots_cles}
     Structure: Titre accrocheur, intro bénéfices, liste avantages, appel à l'action.
     """
-    # ✅ Modèles valides
-    modeles = ['gemini-3.6-flash', 'gemini-3.5-flash']
+    modeles = ['gemini-flash-latest']
     derniere_erreur = None
-    
+
     for mod in modeles:
         try:
             response = client.models.generate_content(model=mod, contents=prompt)
@@ -366,11 +365,30 @@ def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
         except Exception as e:
             derniere_erreur = str(e)
             continue
-    
+
     return f"❌ Erreur : {derniere_erreur}"
 
 # ============================================
-# INTERFACE
+# 📄 GÉNÉRATION PDF
+# ============================================
+def generer_pdf(contenu, nom_produit):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    pdf.set_font("Helvetica", "B", 16)
+    titre_propre = f"Fiche Produit - {nom_produit}".encode("latin-1", "replace").decode("latin-1")
+    pdf.cell(0, 10, titre_propre, ln=True, align="C")
+    pdf.ln(5)
+
+    pdf.set_font("Helvetica", "", 11)
+    contenu_propre = contenu.encode("latin-1", "replace").decode("latin-1")
+    pdf.multi_cell(0, 6, contenu_propre)
+
+    return bytes(pdf.output())
+
+# ============================================
+# 🌍 INTERFACE
 # ============================================
 st.markdown("## 🌍 Choose your language / Choisissez votre langue / Elige tu idioma")
 
@@ -382,7 +400,12 @@ langue_interface = st.selectbox(
 
 T = TEXTES[langue_interface]
 
-st.write("---")
+# Message si retour de paiement
+if query_params.get("payment") == "success":
+    email_retour = query_params.get("email", "")
+    st.success(T["paiement_ok"])
+    st.info(f"📧 {email_retour}")
+    st.write("---")
 
 st.markdown(f'<div class="promo-badge">{T["promo"]}</div>', unsafe_allow_html=True)
 
@@ -399,7 +422,9 @@ with col_m3:
 
 st.write("---")
 
-# ÉTAPE 1
+# ============================================
+# ÉTAPE 1 : EMAIL
+# ============================================
 st.markdown(f"### {T['etape1']}")
 user_email = st.text_input(
     T["label_email"],
@@ -413,9 +438,16 @@ if user_email:
         db_utilisateurs = charger_utilisateurs()
         deja_utilise = user_email in db_utilisateurs and db_utilisateurs[user_email].get("a_utilise_essai", False)
 
+        # Vérifier si l'email a déjà payé dans cette session
+        email_deja_paye = user_email in st.session_state.emails_payes
+
         if not deja_utilise:
             st.success(T["essai_ok"])
             bouton_texte = T["btn_gratuit"]
+            est_payant = False
+        elif email_deja_paye:
+            st.success(T["paiement_ok"])
+            bouton_texte = "✨ Générer ma fiche payée"
             est_payant = False
         else:
             st.warning(T["essai_utilise"])
@@ -424,6 +456,9 @@ if user_email:
 
         st.write("---")
 
+        # ============================================
+        # ÉTAPE 2 : FORMULAIRE
+        # ============================================
         st.markdown(f"### {T['etape2']}")
         col_form1, col_form2 = st.columns(2)
 
@@ -441,11 +476,15 @@ if user_email:
 
         st.write("")
 
+        # ============================================
+        # BOUTON D'ACTION
+        # ============================================
         if st.button(bouton_texte):
             if not nom_produit or not caracs:
                 st.warning(T["remplir_champs"])
             else:
                 if est_payant:
+                    # ---- PAIEMENT STRIPE ----
                     try:
                         locale_stripe = LOCALES_STRIPE.get(langue_interface, "auto")
                         session_stripe = stripe.checkout.Session.create(
@@ -461,6 +500,7 @@ if user_email:
                     except Exception as e:
                         st.error(f"{T['paiement_erreur']} {str(e)}")
                 else:
+                    # ---- GÉNÉRATION (gratuite OU payée) ----
                     with st.spinner(T["genere_spinner"]):
                         fiche_finale = generer_fiche_ia(
                             nom_produit, caracs, ton_choisi,
@@ -468,8 +508,12 @@ if user_email:
                         )
 
                         if "❌" not in fiche_finale:
-                            enregistrer_utilisateur(user_email, a_utilise_essai=True)
+                            # Marquer l'essai comme utilisé si c'était gratuit
+                            if not deja_utilise:
+                                enregistrer_utilisateur(user_email, a_utilise_essai=True)
+
                             st.session_state.current_result = fiche_finale
+                            st.session_state.current_nom_produit = nom_produit
                             st.session_state.generations += 1
                             st.session_state.generated_products.append({
                                 "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
@@ -481,7 +525,9 @@ if user_email:
                         else:
                             st.error(fiche_finale)
 
-        # PAIEMENT
+        # ============================================
+        # 💳 ZONE DE PAIEMENT
+        # ============================================
         if st.session_state.payment_url:
             st.write("---")
             st.markdown(f"### {T['paiement_titre']}")
@@ -506,7 +552,9 @@ if user_email:
 
             st.caption(T["paiement_info"])
 
-        # RÉSULTAT
+        # ============================================
+        # 📄 AFFICHAGE RÉSULTAT + PDF
+        # ============================================
         if st.session_state.current_result:
             st.write("---")
             st.markdown(f"### {T['resultat']}")
@@ -522,7 +570,26 @@ if user_email:
                     unsafe_allow_html=True
                 )
 
+            # 📄 Bouton PDF
+            try:
+                pdf_bytes = generer_pdf(
+                    st.session_state.current_result,
+                    st.session_state.current_nom_produit or "produit"
+                )
+                nom_fichier = f"fiche_{(st.session_state.current_nom_produit or 'produit').replace(' ', '_')}.pdf"
+                st.download_button(
+                    label=T["pdf_bouton"],
+                    data=pdf_bytes,
+                    file_name=nom_fichier,
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+            except Exception as e:
+                st.warning(f"PDF indisponible : {e}")
+
+        # ============================================
         # HISTORIQUE
+        # ============================================
         if st.session_state.generated_products:
             st.write("---")
             st.markdown(f"### {T['historique']}")
