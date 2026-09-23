@@ -90,6 +90,12 @@ TEXTES = {
         "langue_fiche": "📝 Langue de la fiche produit",
         "ton": "Ton éditorial",
         "longueur": "Longueur de la fiche",
+        "options_ton": ["Professionnel", "Luxe", "Chaleureux", "Minimaliste"],
+        "options_longueur": ["Courte", "Moyenne", "Détaillée"],
+        "options_langue_fiche": [
+            "Français 🇫🇷", "Anglais 🇬🇧", "Espagnol 🇪🇸",
+            "Allemand 🇩🇪", "Italien 🇮🇹", "Arabe 🇸🇦"
+        ],
         "options": "⚙️ Options avancées",
         "mots_cles": "Mots-clés SEO",
         "mots_cles_ph": "Ex: sac durable",
@@ -106,6 +112,7 @@ TEXTES = {
         "paiement_titre": "💳 Paiement sécurisé prêt !",
         "paiement_bouton": "🔒 Payer maintenant 0,99€ sur Stripe",
         "paiement_info": "Paiement 100% sécurisé par Stripe. Aucune donnée bancaire ne transite par notre site.",
+        "paiement_erreur": "❌ Erreur Stripe :",
     },
     "Anglais 🇬🇧": {
         "lang_selector": "🌍 Choose your language",
@@ -126,6 +133,12 @@ TEXTES = {
         "langue_fiche": "📝 Product sheet language",
         "ton": "Editorial tone",
         "longueur": "Sheet length",
+        "options_ton": ["Professional", "Luxury", "Warm", "Minimalist"],
+        "options_longueur": ["Short", "Medium", "Detailed"],
+        "options_langue_fiche": [
+            "French 🇫🇷", "English 🇬🇧", "Spanish 🇪🇸",
+            "German 🇩🇪", "Italian 🇮🇹", "Arabic 🇸🇦"
+        ],
         "options": "⚙️ Advanced options",
         "mots_cles": "SEO keywords",
         "mots_cles_ph": "Ex: durable bag",
@@ -142,6 +155,7 @@ TEXTES = {
         "paiement_titre": "💳 Secure payment ready!",
         "paiement_bouton": "🔒 Pay now €0.99 on Stripe",
         "paiement_info": "100% secure payment by Stripe. No banking data goes through our site.",
+        "paiement_erreur": "❌ Stripe error:",
     },
     "Espagnol 🇪🇸": {
         "lang_selector": "🌍 Elige tu idioma",
@@ -162,6 +176,12 @@ TEXTES = {
         "langue_fiche": "📝 Idioma de la ficha",
         "ton": "Tono editorial",
         "longueur": "Longitud de la ficha",
+        "options_ton": ["Profesional", "Lujo", "Cálido", "Minimalista"],
+        "options_longueur": ["Corta", "Media", "Detallada"],
+        "options_langue_fiche": [
+            "Francés 🇫🇷", "Inglés 🇬🇧", "Español 🇪🇸",
+            "Alemán 🇩🇪", "Italiano 🇮🇹", "Árabe 🇸🇦"
+        ],
         "options": "⚙️ Opciones avanzadas",
         "mots_cles": "Palabras clave SEO",
         "mots_cles_ph": "Ej: bolso duradero",
@@ -178,14 +198,18 @@ TEXTES = {
         "paiement_titre": "💳 ¡Pago seguro listo!",
         "paiement_bouton": "🔒 Pagar ahora 0,99€ en Stripe",
         "paiement_info": "Pago 100% seguro por Stripe. Ningún dato bancario pasa por nuestro sitio.",
+        "paiement_erreur": "❌ Error de Stripe:",
     },
 }
 
-# Options de langue pour la FICHE générée
-LANGUES_FICHE = [
-    "Français 🇫🇷", "Anglais 🇬🇧", "Espagnol 🇪🇸",
-    "Allemand 🇩🇪", "Italien 🇮🇹", "Arabe 🇸🇦"
-]
+# ============================================
+# 🌍 CORRESPONDANCE LANGUE INTERFACE → LOCALE STRIPE
+# ============================================
+LOCALES_STRIPE = {
+    "Français 🇫🇷": "fr",
+    "Anglais 🇬🇧": "en",
+    "Espagnol 🇪🇸": "es",
+}
 
 # ============================================
 # INITIALISATION DES SECRETS & API
@@ -336,9 +360,9 @@ if user_email:
             caracs = st.text_area(T["caracs"], placeholder=T["caracs_ph"])
 
         with col_form2:
-            langue_choisie = st.selectbox(T["langue_fiche"], LANGUES_FICHE)
-            ton_choisi = st.selectbox(T["ton"], ["Professionnel", "Luxe", "Chaleureux", "Minimaliste"])
-            longueur_choisie = st.selectbox(T["longueur"], ["Courte", "Moyenne", "Détaillée"])
+            langue_choisie = st.selectbox(T["langue_fiche"], T["options_langue_fiche"])
+            ton_choisi = st.selectbox(T["ton"], T["options_ton"])
+            longueur_choisie = st.selectbox(T["longueur"], T["options_longueur"])
 
         with st.expander(T["options"]):
             mots_cles = st.text_input(T["mots_cles"], placeholder=T["mots_cles_ph"])
@@ -355,6 +379,9 @@ if user_email:
                 if est_payant:
                     # ---- PAIEMENT STRIPE ----
                     try:
+                        # 🌍 Locale Stripe selon la langue de l'interface
+                        locale_stripe = LOCALES_STRIPE.get(langue_interface, "auto")
+
                         session_stripe = stripe.checkout.Session.create(
                             payment_method_types=['card'],
                             line_items=[{
@@ -364,12 +391,12 @@ if user_email:
                             mode='payment',
                             success_url=f"{MON_URL_STREAMLIT}?payment=success&email={user_email}",
                             cancel_url=MON_URL_STREAMLIT,
-                            customer_email=user_email
+                            customer_email=user_email,
+                            locale=locale_stripe   # 🌍 Force la langue de la page Stripe
                         )
-                        # Stocker l'URL dans la session (pas de lien brut affiché)
                         st.session_state.payment_url = session_stripe.url
                     except Exception as e:
-                        st.error(f"❌ Erreur Stripe : {str(e)}")
+                        st.error(f"{T['paiement_erreur']} {str(e)}")
                 else:
                     # ---- GÉNÉRATION GRATUITE ----
                     with st.spinner(T["genere_spinner"]):
@@ -393,13 +420,12 @@ if user_email:
                             st.error(fiche_finale)
 
         # ============================================
-        # 💳 ZONE DE PAIEMENT PROPRE (garantie d'affichage)
+        # 💳 ZONE DE PAIEMENT PROPRE
         # ============================================
         if st.session_state.payment_url:
             st.write("---")
             st.markdown(f"### {T['paiement_titre']}")
 
-            # Tentative avec st.link_button (Streamlit ≥ 1.31)
             bouton_affiche = False
             try:
                 st.link_button(
@@ -411,7 +437,6 @@ if user_email:
             except (AttributeError, TypeError):
                 pass
 
-            # Fallback HTML si st.link_button indisponible
             if not bouton_affiche:
                 st.markdown(
                     f'<a href="{st.session_state.payment_url}" target="_blank" class="pay-btn">'
@@ -428,7 +453,7 @@ if user_email:
             st.write("---")
             st.markdown(f"### {T['resultat']}")
 
-            if "Arabe" in langue_choisie or "🇸🇦" in langue_choisie:
+            if any(x in langue_choisie for x in ["Arabe", "Arabic", "Árabe", "🇸🇦"]):
                 st.markdown(
                     f'<div class="result-box" style="direction: rtl; text-align: right;">{st.session_state.current_result}</div>',
                     unsafe_allow_html=True
@@ -447,7 +472,7 @@ if user_email:
             st.markdown(f"### {T['historique']}")
             for prod in reversed(st.session_state.generated_products):
                 with st.expander(f"📦 {prod['nom']} ({prod['langue']}) - {prod['date']}"):
-                    if "Arabe" in prod['langue'] or "🇸🇦" in prod['langue']:
+                    if any(x in prod['langue'] for x in ["Arabe", "Arabic", "Árabe", "🇸🇦"]):
                         st.markdown(
                             f'<div style="direction: rtl; text-align: right;">{prod["contenu"]}</div>',
                             unsafe_allow_html=True
