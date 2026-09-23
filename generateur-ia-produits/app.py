@@ -17,62 +17,148 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# CSS Mobile First avec support desktop
+# ============================================
+# 🎨 CSS MODERNE — FOND DÉGRADÉ + CARTES
+# ============================================
 st.markdown("""
 <style>
-    .stApp { max-width: 100%; padding: 0.5rem; }
+    /* FOND DÉGRADÉ MODERNE */
+    .stApp {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        background-attachment: fixed;
+        min-height: 100vh;
+    }
+    
+    /* CONTENEUR PRINCIPAL BLANC QUI FLOTTE */
+    .main .block-container {
+        background: rgba(255, 255, 255, 0.97);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-top: 1rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* TITRES AVEC DÉGRADÉ */
+    h1 {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 800 !important;
+    }
+    h2, h3 { color: #333 !important; font-weight: 700 !important; }
+    
+    /* BOUTONS MODERNES */
     .stButton button {
-        border-radius: 10px !important; padding: 12px !important;
-        font-size: 16px !important; font-weight: 600 !important;
-        transition: all 0.3s ease; width: 100%;
-        background-color: #6772e5 !important; color: white !important;
+        border-radius: 12px !important;
+        padding: 14px !important;
+        font-size: 16px !important;
+        font-weight: 700 !important;
+        width: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
     }
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+    }
+    
     .stLinkButton a {
-        display: block !important; text-align: center !important;
-        padding: 14px !important; background-color: #6772e5 !important;
-        color: white !important; border-radius: 10px !important;
-        text-decoration: none !important; font-weight: 600 !important;
-        font-size: 16px !important; width: 100% !important;
+        display: block !important;
+        text-align: center !important;
+        padding: 16px !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border-radius: 12px !important;
+        text-decoration: none !important;
+        font-weight: 700 !important;
+        width: 100% !important;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
     }
+    
+    /* CHAMPS DE SAISIE */
     .stTextInput input, .stTextArea textarea {
-        font-size: 16px !important; padding: 12px !important; border-radius: 10px !important;
+        font-size: 16px !important;
+        padding: 12px !important;
+        border-radius: 10px !important;
+        border: 2px solid #e0e0e0 !important;
     }
-    .stMetric { background: #f8f9fa; padding: 8px; border-radius: 10px; text-align: center; }
-    @media (min-width: 769px) {
-        .stApp { padding: 1rem 2rem; }
-        .stButton button { padding: 14px !important; font-size: 18px !important; }
-        h1 { font-size: 36px !important; }
+    .stTextInput input:focus, .stTextArea textarea:focus {
+        border-color: #667eea !important;
     }
+    
+    /* CARTES MÉTRIQUES */
+    .stMetric {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        padding: 20px 15px;
+        border-radius: 15px;
+        text-align: center;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    }
+    .stMetric label { color: #666 !important; font-weight: 600 !important; }
+    
+    /* BADGE PROMO ANIMÉ */
     .promo-badge {
-        background-color: #ff4b4b; color: white; padding: 12px; border-radius: 10px;
-        text-align: center; font-weight: bold; margin-bottom: 20px; font-size: 16px;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 16px 20px;
+        border-radius: 12px;
+        text-align: center;
+        font-weight: 700;
+        margin-bottom: 25px;
+        font-size: 16px;
+        box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
     }
+    
+    /* RÉSULTAT */
     .result-box {
-        background-color: #f1f3f9; padding: 20px; border-radius: 10px;
-        border-left: 5px solid #6772e5; margin-top: 20px;
+        background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+        padding: 25px;
+        border-radius: 15px;
+        border-left: 5px solid #667eea;
+        margin-top: 20px;
         white-space: pre-line;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
     }
+    
+    /* BOÎTE PAIEMENT */
     .payment-box {
-        background-color: #f0f4ff; padding: 20px; border-radius: 10px;
-        border: 2px solid #6772e5; margin-top: 20px; text-align: center;
+        background: linear-gradient(135deg, #f0f4ff 0%, #e8efff 100%);
+        padding: 25px;
+        border-radius: 15px;
+        border: 2px solid #667eea;
+        margin-top: 20px;
+        text-align: center;
     }
+    
+    /* BOUTON PAIEMENT FALLBACK */
     .pay-btn {
-        display: block; text-align: center; padding: 16px;
-        background-color: #6772e5; color: white !important;
-        border-radius: 10px; text-decoration: none;
-        font-weight: 600; font-size: 16px; margin: 15px 0;
-        transition: background-color 0.3s ease;
+        display: block;
+        text-align: center;
+        padding: 16px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 700;
+        margin: 15px 0;
     }
-    .pay-btn:hover { background-color: #5568d3; color: white !important; }
+    
+    @media (max-width: 768px) {
+        .main .block-container { padding: 1rem; border-radius: 15px; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# 🌍 TRADUCTIONS DE L'INTERFACE
+# 🌍 TRADUCTIONS
 # ============================================
 TEXTES = {
     "Français 🇫🇷": {
-        "lang_selector": "🌍 Choisissez votre langue",
         "promo": "🎁 Votre 1ère fiche 100% Gratuite · Puis Offre flash : 5 fiches pour le prix de 4 !",
         "titre": "🛍️ Fiche Produit",
         "sous_titre": "Générez des fiches produits professionnelles en 30 secondes",
@@ -92,30 +178,26 @@ TEXTES = {
         "longueur": "Longueur de la fiche",
         "options_ton": ["Professionnel", "Luxe", "Chaleureux", "Minimaliste"],
         "options_longueur": ["Courte", "Moyenne", "Détaillée"],
-        "options_langue_fiche": [
-            "Français 🇫🇷", "Anglais 🇬🇧", "Espagnol 🇪🇸",
-            "Allemand 🇩🇪", "Italien 🇮🇹", "Arabe 🇸🇦"
-        ],
+        "options_langue_fiche": ["Français 🇫🇷", "Anglais 🇬🇧", "Espagnol 🇪🇸", "Allemand 🇩🇪", "Italien 🇮🇹", "Arabe 🇸🇦"],
         "options": "⚙️ Options avancées",
         "mots_cles": "Mots-clés SEO",
         "mots_cles_ph": "Ex: sac durable",
         "btn_gratuit": "🚀 Générer ma fiche gratuite (Essai offert)",
         "btn_payant": "💳 Payer et générer ma fiche (0,99€)",
-        "essai_ok": "🎉 Bonne nouvelle ! Vous bénéficiez d'un **essai gratuit (1 fiche offerte)** avec cet e-mail.",
-        "essai_utilise": "ℹ️ Vous avez déjà consommé votre essai gratuit. Les prochaines fiches sont à **0,99€** via paiement sécurisé.",
+        "essai_ok": "🎉 Bonne nouvelle ! Vous bénéficiez d'un **essai gratuit (1 fiche offerte)**.",
+        "essai_utilise": "ℹ️ Essai déjà consommé. Prochaines fiches : **0,99€**.",
         "email_invalide": "❌ Veuillez entrer une adresse e-mail valide.",
         "genere_ok": "✨ Votre fiche gratuite a été générée avec succès !",
-        "genere_spinner": "🤖 Génération de votre fiche gratuite en cours...",
+        "genere_spinner": "🤖 Génération en cours...",
         "resultat": "✨ Votre fiche produit générée :",
         "historique": "📋 Vos fiches générées",
         "remplir_champs": "⚠️ Veuillez remplir le nom et les caractéristiques.",
         "paiement_titre": "💳 Paiement sécurisé prêt !",
         "paiement_bouton": "🔒 Payer maintenant 0,99€ sur Stripe",
-        "paiement_info": "Paiement 100% sécurisé par Stripe. Aucune donnée bancaire ne transite par notre site.",
+        "paiement_info": "Paiement 100% sécurisé par Stripe.",
         "paiement_erreur": "❌ Erreur Stripe :",
     },
     "Anglais 🇬🇧": {
-        "lang_selector": "🌍 Choose your language",
         "promo": "🎁 Your 1st sheet 100% Free · Then Flash offer: 5 sheets for the price of 4!",
         "titre": "🛍️ Product Sheet",
         "sous_titre": "Generate professional product sheets in 30 seconds",
@@ -135,30 +217,26 @@ TEXTES = {
         "longueur": "Sheet length",
         "options_ton": ["Professional", "Luxury", "Warm", "Minimalist"],
         "options_longueur": ["Short", "Medium", "Detailed"],
-        "options_langue_fiche": [
-            "French 🇫🇷", "English 🇬🇧", "Spanish 🇪🇸",
-            "German 🇩🇪", "Italian 🇮🇹", "Arabic 🇸🇦"
-        ],
+        "options_langue_fiche": ["French 🇫🇷", "English 🇬🇧", "Spanish 🇪🇸", "German 🇩🇪", "Italian 🇮🇹", "Arabic 🇸🇦"],
         "options": "⚙️ Advanced options",
         "mots_cles": "SEO keywords",
         "mots_cles_ph": "Ex: durable bag",
         "btn_gratuit": "🚀 Generate my free sheet (Free trial)",
         "btn_payant": "💳 Pay and generate my sheet (€0.99)",
-        "essai_ok": "🎉 Good news! You get a **free trial (1 sheet offered)** with this email.",
-        "essai_utilise": "ℹ️ You already used your free trial. Next sheets are **€0.99** via secure payment.",
+        "essai_ok": "🎉 Good news! You get a **free trial (1 sheet offered)**.",
+        "essai_utilise": "ℹ️ Trial already used. Next sheets: **€0.99**.",
         "email_invalide": "❌ Please enter a valid email address.",
         "genere_ok": "✨ Your free sheet has been generated successfully!",
-        "genere_spinner": "🤖 Generating your free sheet...",
+        "genere_spinner": "🤖 Generating...",
         "resultat": "✨ Your generated product sheet:",
         "historique": "📋 Your generated sheets",
         "remplir_champs": "⚠️ Please fill in the name and features.",
         "paiement_titre": "💳 Secure payment ready!",
         "paiement_bouton": "🔒 Pay now €0.99 on Stripe",
-        "paiement_info": "100% secure payment by Stripe. No banking data goes through our site.",
+        "paiement_info": "100% secure payment by Stripe.",
         "paiement_erreur": "❌ Stripe error:",
     },
     "Espagnol 🇪🇸": {
-        "lang_selector": "🌍 Elige tu idioma",
         "promo": "🎁 ¡Tu 1ª ficha 100% Gratis · Oferta flash: 5 fichas por el precio de 4!",
         "titre": "🛍️ Ficha de Producto",
         "sous_titre": "Genera fichas de productos profesionales en 30 segundos",
@@ -178,33 +256,27 @@ TEXTES = {
         "longueur": "Longitud de la ficha",
         "options_ton": ["Profesional", "Lujo", "Cálido", "Minimalista"],
         "options_longueur": ["Corta", "Media", "Detallada"],
-        "options_langue_fiche": [
-            "Francés 🇫🇷", "Inglés 🇬🇧", "Español 🇪🇸",
-            "Alemán 🇩🇪", "Italiano 🇮🇹", "Árabe 🇸🇦"
-        ],
+        "options_langue_fiche": ["Francés 🇫🇷", "Inglés 🇬🇧", "Español 🇪🇸", "Alemán 🇩🇪", "Italiano 🇮🇹", "Árabe 🇸🇦"],
         "options": "⚙️ Opciones avanzadas",
         "mots_cles": "Palabras clave SEO",
         "mots_cles_ph": "Ej: bolso duradero",
         "btn_gratuit": "🚀 Generar mi ficha gratis (Prueba gratis)",
         "btn_payant": "💳 Pagar y generar mi ficha (0,99€)",
-        "essai_ok": "🎉 ¡Buenas noticias! Tienes una **prueba gratuita (1 ficha)** con este correo.",
-        "essai_utilise": "ℹ️ Ya usaste tu prueba gratuita. Próximas fichas: **0,99€** con pago seguro.",
-        "email_invalide": "❌ Por favor introduce un correo electrónico válido.",
+        "essai_ok": "🎉 ¡Buenas noticias! Tienes una **prueba gratuita (1 ficha)**.",
+        "essai_utilise": "ℹ️ Prueba ya usada. Próximas fichas: **0,99€**.",
+        "email_invalide": "❌ Por favor introduce un correo válido.",
         "genere_ok": "✨ ¡Tu ficha gratuita se ha generado con éxito!",
-        "genere_spinner": "🤖 Generando tu ficha gratuita...",
+        "genere_spinner": "🤖 Generando...",
         "resultat": "✨ Tu ficha de producto generada:",
         "historique": "📋 Tus fichas generadas",
         "remplir_champs": "⚠️ Por favor rellena el nombre y las características.",
         "paiement_titre": "💳 ¡Pago seguro listo!",
         "paiement_bouton": "🔒 Pagar ahora 0,99€ en Stripe",
-        "paiement_info": "Pago 100% seguro por Stripe. Ningún dato bancario pasa por nuestro sitio.",
+        "paiement_info": "Pago 100% seguro por Stripe.",
         "paiement_erreur": "❌ Error de Stripe:",
     },
 }
 
-# ============================================
-# 🌍 CORRESPONDANCE LANGUE INTERFACE → LOCALE STRIPE
-# ============================================
 LOCALES_STRIPE = {
     "Français 🇫🇷": "fr",
     "Anglais 🇬🇧": "en",
@@ -212,7 +284,7 @@ LOCALES_STRIPE = {
 }
 
 # ============================================
-# INITIALISATION DES SECRETS & API
+# SECRETS & API
 # ============================================
 try:
     STRIPE_SECRET_KEY = st.secrets["STRIPE_SECRET_KEY"]
@@ -231,7 +303,7 @@ except Exception as e:
     st.stop()
 
 # ============================================
-# GESTION LOCALE DES UTILISATEURS
+# UTILISATEURS
 # ============================================
 DB_FILE = "utilisateurs.json"
 
@@ -255,7 +327,7 @@ def valider_email(email):
     return re.match(regex, email) is not None
 
 # ============================================
-# STATE DE SESSION
+# STATE
 # ============================================
 if "generations" not in st.session_state:
     st.session_state.generations = 0
@@ -269,28 +341,36 @@ if "payment_url" not in st.session_state:
     st.session_state.payment_url = None
 
 # ============================================
-# FONCTION GÉNÉRATION IA
+# 🤖 GÉNÉRATION IA (MODÈLES CORRIGÉS)
 # ============================================
 def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     prompt = f"""
-    Tu es un expert en copywriting e-commerce et en SEO.
-    Rédige une fiche produit captivante, vendeuse et optimisée pour les moteurs de recherche.
-    LA FICHE PRODUIT DOIT IMPÉRATIVEMENT ÊTRE RÉDIGÉE EN : {langue}.
-    Si la langue est l'Arabe, adapte la structure globale de droite à gauche.
-    Produit: {nom}, Caractéristiques: {caracteristiques}, Ton: {ton}, Longueur: {longueur}, Mots-clés: {mots_cles}.
-    Structure attendue: Titre accrocheur, introduction bénéfices, liste à puces avantages, appel à l'action.
+    Tu es un expert en copywriting e-commerce et SEO.
+    Rédige une fiche produit captivante et optimisée SEO.
+    LA FICHE DOIT ÊTRE EN : {langue}.
+    Produit: {nom}
+    Caractéristiques: {caracteristiques}
+    Ton: {ton}
+    Longueur: {longueur}
+    Mots-clés: {mots_cles}
+    Structure: Titre accrocheur, intro bénéfices, liste avantages, appel à l'action.
     """
-    modeles = ['gemini-2.5-flash']
+    # ✅ Modèles valides
+    modeles = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+    derniere_erreur = None
+    
     for mod in modeles:
         try:
             response = client.models.generate_content(model=mod, contents=prompt)
             return response.text
-        except Exception:
+        except Exception as e:
+            derniere_erreur = str(e)
             continue
-    return "❌ Serveurs saturés, veuillez réessayer dans un instant."
+    
+    return f"❌ Erreur : {derniere_erreur}"
 
 # ============================================
-# 🌍 SÉLECTEUR DE LANGUE — TOUT EN HAUT
+# INTERFACE
 # ============================================
 st.markdown("## 🌍 Choose your language / Choisissez votre langue / Elige tu idioma")
 
@@ -304,9 +384,6 @@ T = TEXTES[langue_interface]
 
 st.write("---")
 
-# ============================================
-# INTERFACE TRADUITE
-# ============================================
 st.markdown(f'<div class="promo-badge">{T["promo"]}</div>', unsafe_allow_html=True)
 
 st.title(T["titre"])
@@ -322,9 +399,7 @@ with col_m3:
 
 st.write("---")
 
-# ============================================
-# ÉTAPE 1 : IDENTIFICATION PAR E-MAIL
-# ============================================
+# ÉTAPE 1
 st.markdown(f"### {T['etape1']}")
 user_email = st.text_input(
     T["label_email"],
@@ -349,9 +424,6 @@ if user_email:
 
         st.write("---")
 
-        # ============================================
-        # ÉTAPE 2 : FORMULAIRE PRODUIT
-        # ============================================
         st.markdown(f"### {T['etape2']}")
         col_form1, col_form2 = st.columns(2)
 
@@ -369,36 +441,26 @@ if user_email:
 
         st.write("")
 
-        # ============================================
-        # BOUTON D'ACTION DYNAMIQUE
-        # ============================================
         if st.button(bouton_texte):
             if not nom_produit or not caracs:
                 st.warning(T["remplir_champs"])
             else:
                 if est_payant:
-                    # ---- PAIEMENT STRIPE ----
                     try:
-                        # 🌍 Locale Stripe selon la langue de l'interface
                         locale_stripe = LOCALES_STRIPE.get(langue_interface, "auto")
-
                         session_stripe = stripe.checkout.Session.create(
                             payment_method_types=['card'],
-                            line_items=[{
-                                'price': STRIPE_PRICE_ID,
-                                'quantity': 1,
-                            }],
+                            line_items=[{'price': STRIPE_PRICE_ID, 'quantity': 1}],
                             mode='payment',
                             success_url=f"{MON_URL_STREAMLIT}?payment=success&email={user_email}",
                             cancel_url=MON_URL_STREAMLIT,
                             customer_email=user_email,
-                            locale=locale_stripe   # 🌍 Force la langue de la page Stripe
+                            locale=locale_stripe
                         )
                         st.session_state.payment_url = session_stripe.url
                     except Exception as e:
                         st.error(f"{T['paiement_erreur']} {str(e)}")
                 else:
-                    # ---- GÉNÉRATION GRATUITE ----
                     with st.spinner(T["genere_spinner"]):
                         fiche_finale = generer_fiche_ia(
                             nom_produit, caracs, ton_choisi,
@@ -419,9 +481,7 @@ if user_email:
                         else:
                             st.error(fiche_finale)
 
-        # ============================================
-        # 💳 ZONE DE PAIEMENT PROPRE
-        # ============================================
+        # PAIEMENT
         if st.session_state.payment_url:
             st.write("---")
             st.markdown(f"### {T['paiement_titre']}")
@@ -446,9 +506,7 @@ if user_email:
 
             st.caption(T["paiement_info"])
 
-        # ============================================
-        # ZONE D'AFFICHAGE DU RÉSULTAT
-        # ============================================
+        # RÉSULTAT
         if st.session_state.current_result:
             st.write("---")
             st.markdown(f"### {T['resultat']}")
@@ -464,18 +522,10 @@ if user_email:
                     unsafe_allow_html=True
                 )
 
-        # ============================================
         # HISTORIQUE
-        # ============================================
         if st.session_state.generated_products:
             st.write("---")
             st.markdown(f"### {T['historique']}")
             for prod in reversed(st.session_state.generated_products):
                 with st.expander(f"📦 {prod['nom']} ({prod['langue']}) - {prod['date']}"):
-                    if any(x in prod['langue'] for x in ["Arabe", "Arabic", "Árabe", "🇸🇦"]):
-                        st.markdown(
-                            f'<div style="direction: rtl; text-align: right;">{prod["contenu"]}</div>',
-                            unsafe_allow_html=True
-                        )
-                    else:
-                        st.markdown(prod['contenu'])
+                    st.markdown(prod['contenu'])
