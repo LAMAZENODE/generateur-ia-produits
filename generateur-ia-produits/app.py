@@ -356,7 +356,7 @@ def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     Structure: Titre accrocheur, intro bénéfices, liste avantages, appel à l'action.
     """
     # ✅ Modèles valides
-    modeles = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+    modeles = ['gemini-2.5-flash', 'gemini-2.5-pro']
     derniere_erreur = None
     
     for mod in modeles:
