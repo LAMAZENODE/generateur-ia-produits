@@ -3,6 +3,7 @@ from google import genai
 import json
 import os
 import re
+import time
 import stripe
 from datetime import datetime
 from fpdf import FPDF
@@ -190,6 +191,7 @@ TEXTES = {
         "paiement_erreur": "❌ Erreur Stripe :",
         "paiement_ok": "🎉 Paiement confirmé ! Complétez le formulaire pour générer votre fiche.",
         "pdf_bouton": "📄 Télécharger en PDF",
+        "surcharge": "⏳ Le service est momentanément surchargé. Merci de réessayer dans 1 à 2 minutes. Votre essai gratuit n'a **pas** été consommé.",
     },
     "Anglais 🇬🇧": {
         "promo": "🎁 Your 1st sheet 100% Free · Then Flash offer: 5 sheets for the price of 4!",
@@ -231,6 +233,7 @@ TEXTES = {
         "paiement_erreur": "❌ Stripe error:",
         "paiement_ok": "🎉 Payment confirmed! Complete the form to generate your sheet.",
         "pdf_bouton": "📄 Download PDF",
+        "surcharge": "⏳ The service is temporarily overloaded. Please try again in 1-2 minutes. Your free trial was **not** consumed.",
     },
     "Espagnol 🇪🇸": {
         "promo": "🎁 ¡Tu 1ª ficha 100% Gratis · Oferta flash: 5 fichas por el precio de 4!",
@@ -272,6 +275,7 @@ TEXTES = {
         "paiement_erreur": "❌ Error de Stripe:",
         "paiement_ok": "🎉 ¡Pago confirmado! Completa el formulario para generar tu ficha.",
         "pdf_bouton": "📄 Descargar PDF",
+        "surcharge": "⏳ El servicio está temporalmente sobrecargado. Inténtalo de nuevo en 1-2 minutos. Tu prueba gratuita **no** se ha consumido.",
     },
 }
 
@@ -339,9 +343,11 @@ if "user_count" not in st.session_state:
     st.session_state.user_count = 847
 if "payment_url" not in st.session_state:
     st.session_state.payment_url = None
+if "cache_fiche" not in st.session_state:
+    st.session_state.cache_fiche = {}
 
 # ============================================
-# 🤖 GÉNÉRATION IA
+# 🤖 GÉNÉRATION IA (AVEC RETRY + FALLBACK)
 # ============================================
 def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     prompt = f"""
@@ -355,16 +361,28 @@ def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     Mots-clés: {mots_cles}
     Structure: Titre accrocheur, intro bénéfices, liste avantages, appel à l'action.
     """
-    modeles = ['gemini-flash-latest']
+
+    # Plusieurs modèles en secours, du plus récent au plus stable
+    modeles = [
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-8b',
+    ]
     derniere_erreur = None
 
     for mod in modeles:
-        try:
-            response = client.models.generate_content(model=mod, contents=prompt)
-            return response.text
-        except Exception as e:
-            derniere_erreur = str(e)
-            continue
+        for tentative in range(2):  # 2 essais par modèle
+            try:
+                response = client.models.generate_content(model=mod, contents=prompt)
+                if response and response.text:
+                    return response.text
+            except Exception as e:
+                derniere_erreur = str(e)
+                # Si erreur 503, on attend un peu avant de réessayer
+                if "503" in derniere_erreur or "UNAVAILABLE" in derniere_erreur:
+                    time.sleep(2)
+                continue
 
     return f"❌ Erreur : {derniere_erreur}"
 
@@ -376,7 +394,6 @@ def generer_pdf(contenu, nom_produit):
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
-    # 🔧 Remplace les caractères Unicode par des équivalents ASCII
     def nettoyer(texte):
         remplacements = {
             "—": "-", "–": "-", "’": "'", "‘": "'",
@@ -411,7 +428,6 @@ langue_interface = st.selectbox(
 
 T = TEXTES[langue_interface]
 
-# Message si retour de paiement
 if query_params.get("payment") == "success":
     email_retour = query_params.get("email", "")
     st.success(T["paiement_ok"])
@@ -449,7 +465,6 @@ if user_email:
         db_utilisateurs = charger_utilisateurs()
         deja_utilise = user_email in db_utilisateurs and db_utilisateurs[user_email].get("a_utilise_essai", False)
 
-        # Vérifier si l'email a déjà payé dans cette session
         email_deja_paye = user_email in st.session_state.emails_payes
 
         if not deja_utilise:
@@ -512,27 +527,39 @@ if user_email:
                         st.error(f"{T['paiement_erreur']} {str(e)}")
                 else:
                     # ---- GÉNÉRATION (gratuite OU payée) ----
-                    with st.spinner(T["genere_spinner"]):
-                        fiche_finale = generer_fiche_ia(
-                            nom_produit, caracs, ton_choisi,
-                            longueur_choisie, mots_cles, langue_choisie
-                        )
+                    # Cache pour éviter les appels API redondants
+                    cle_cache = f"{nom_produit}|{caracs}|{ton_choisi}|{longueur_choisie}|{langue_choisie}|{mots_cles}"
 
-                        if "❌" not in fiche_finale:
-                            # Marquer l'essai comme utilisé si c'était gratuit
-                            if not deja_utilise:
-                                enregistrer_utilisateur(user_email, a_utilise_essai=True)
+                    if cle_cache in st.session_state.cache_fiche:
+                        fiche_finale = st.session_state.cache_fiche[cle_cache]
+                    else:
+                        with st.spinner(T["genere_spinner"]):
+                            fiche_finale = generer_fiche_ia(
+                                nom_produit, caracs, ton_choisi,
+                                longueur_choisie, mots_cles, langue_choisie
+                            )
+                            if "❌" not in fiche_finale:
+                                st.session_state.cache_fiche[cle_cache] = fiche_finale
 
-                            st.session_state.current_result = fiche_finale
-                            st.session_state.current_nom_produit = nom_produit
-                            st.session_state.generations += 1
-                            st.session_state.generated_products.append({
-                                "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                                "nom": nom_produit,
-                                "langue": langue_choisie,
-                                "contenu": fiche_finale
-                            })
-                            st.success(T["genere_ok"])
+                    if "❌" not in fiche_finale:
+                        # Marquer l'essai comme utilisé si c'était gratuit
+                        if not deja_utilise:
+                            enregistrer_utilisateur(user_email, a_utilise_essai=True)
+
+                        st.session_state.current_result = fiche_finale
+                        st.session_state.current_nom_produit = nom_produit
+                        st.session_state.generations += 1
+                        st.session_state.generated_products.append({
+                            "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                            "nom": nom_produit,
+                            "langue": langue_choisie,
+                            "contenu": fiche_finale
+                        })
+                        st.success(T["genere_ok"])
+                    else:
+                        # Message clair si surcharge API
+                        if "503" in fiche_finale or "UNAVAILABLE" in fiche_finale:
+                            st.warning(T["surcharge"])
                         else:
                             st.error(fiche_finale)
 
@@ -607,5 +634,3 @@ if user_email:
             for prod in reversed(st.session_state.generated_products):
                 with st.expander(f"📦 {prod['nom']} ({prod['langue']}) - {prod['date']}"):
                     st.markdown(prod['contenu'])
-
-
