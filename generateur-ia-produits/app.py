@@ -240,9 +240,9 @@ TEXTES = {
         "mots_cles": "Mots-clés SEO",
         "mots_cles_ph": "Ex: sac durable",
         "btn_gratuit": "🚀 Générer ma fiche gratuite (Essai offert)",
-        "btn_payant": "💳 Payer et générer ma fiche (0,99€)",
+        "btn_payant": "💳 Payer et générer ma fiche (0,99 €)",
         "essai_ok": "🎉 Bonne nouvelle ! Vous bénéficiez d'un **essai gratuit (1 fiche offerte)**.",
-        "essai_utilise": "ℹ️ Essai déjà consommé. Prochaines fiches : **0,99€**.",
+        "essai_utilise": "ℹ️ Essai déjà consommé. Prochaines fiches : **0,99 €**.",
         "email_invalide": "❌ Veuillez entrer une adresse e-mail valide.",
         "genere_ok": "✨ Votre fiche a été générée avec succès !",
         "genere_spinner": "🤖 Génération en cours...",
@@ -250,7 +250,7 @@ TEXTES = {
         "historique": "📋 Vos fiches générées",
         "remplir_champs": "⚠️ Veuillez remplir le nom et les caractéristiques.",
         "paiement_titre": "💳 Paiement sécurisé prêt !",
-        "paiement_bouton": "🔒 Payer maintenant 0,99€ sur Stripe",
+        "paiement_bouton": "🔒 Payer maintenant 0,99 € sur Stripe",
         "paiement_info": "Paiement 100% sécurisé par Stripe.",
         "paiement_erreur": "❌ Erreur Stripe :",
         "paiement_ok": "🎉 Paiement confirmé ! Complétez le formulaire pour générer votre fiche.",
@@ -326,9 +326,9 @@ TEXTES = {
         "mots_cles": "Palabras clave SEO",
         "mots_cles_ph": "Ej: bolso duradero",
         "btn_gratuit": "🚀 Generar mi ficha gratis (Prueba gratis)",
-        "btn_payant": "💳 Pagar y generar mi ficha (0,99€)",
+        "btn_payant": "💳 Pagar y generar mi ficha (0,99 €)",
         "essai_ok": "🎉 ¡Buenas noticias! Tienes una **prueba gratuita (1 ficha)**.",
-        "essai_utilise": "ℹ️ Prueba ya usada. Próximas fichas: **0,99€**.",
+        "essai_utilise": "ℹ️ Prueba ya usada. Próximas fichas: **0,99 €**.",
         "email_invalide": "❌ Por favor introduce un correo válido.",
         "genere_ok": "✨ ¡Tu ficha se ha generado con éxito!",
         "genere_spinner": "🤖 Generando...",
@@ -336,7 +336,7 @@ TEXTES = {
         "historique": "📋 Tus fichas generadas",
         "remplir_champs": "⚠️ Por favor rellena el nombre y las características.",
         "paiement_titre": "💳 ¡Pago seguro listo!",
-        "paiement_bouton": "🔒 Pagar ahora 0,99€ en Stripe",
+        "paiement_bouton": "🔒 Pagar ahora 0,99 € en Stripe",
         "paiement_info": "Pago 100% seguro por Stripe.",
         "paiement_erreur": "❌ Error de Stripe:",
         "paiement_ok": "🎉 ¡Pago confirmado! Completa el formulario para generar tu ficha.",
@@ -460,16 +460,34 @@ if "cache_fiche" not in st.session_state:
 # ============================================
 def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     prompt = f"""
-    Tu es un expert en copywriting e-commerce et SEO.
-    Rédige une fiche produit captivante et optimisée SEO.
-    LA FICHE DOIT ÊTRE EN : {langue}.
-    Produit: {nom}
-    Caractéristiques: {caracteristiques}
-    Ton: {ton}
-    Longueur: {longueur}
-    Mots-clés: {mots_cles}
-    Structure: Titre accrocheur, intro bénéfices, liste avantages, appel à l'action.
-    """
+Tu es un expert en copywriting e-commerce et SEO.
+
+Rédige une fiche produit captivante, optimisée pour la conversion et le référencement.
+LA FICHE DOIT ÊTRE ENTIÈREMENT RÉDIGÉE EN : {langue}.
+
+=== INFORMATIONS PRODUIT ===
+- Nom : {nom}
+- Caractéristiques : {caracteristiques}
+- Ton éditorial : {ton}
+- Longueur : {longueur}
+- Mots-clés SEO : {mots_cles}
+
+=== STRUCTURE ATTENDUE ===
+1. Un titre H1 accrocheur (≤ 70 caractères)
+2. Un sous-titre bénéfice (≤ 120 caractères)
+3. Une introduction de 2-3 phrases orientée bénéfices client
+4. Une section "Pourquoi choisir ce produit ?" avec 4 puces
+5. Une section "Caractéristiques clés" avec 4 puces
+6. Un appel à l'action final percutant
+
+=== RÈGLES STRICTES ===
+- N'utilise JAMAIS de séparateurs comme "--", "---" ou "___".
+- Sépare les sections par des titres Markdown (##, ###).
+- Utilise des puces avec "-" uniquement pour les listes.
+- Relis-toi : aucune faute d'orthographe, aucune phrase inachevée.
+- Ne mets pas de code Markdown autour du texte (pas de ```).
+- Réponds UNIQUEMENT avec la fiche finale, sans commentaire.
+"""
 
     modeles = obtenir_modeles_disponibles()
 
@@ -554,7 +572,7 @@ with col_m1:
 with col_m2:
     st.metric(label=T["metric_users"], value=f"{st.session_state.user_count} (+12)")
 with col_m3:
-    st.metric(label=T["metric_prix"], value="0,99€")
+    st.metric(label=T["metric_prix"], value="0,99 €")
 
 st.write("---")
 
@@ -718,23 +736,4 @@ if user_email:
                     st.session_state.current_result,
                     st.session_state.current_nom_produit or "produit"
                 )
-                nom_fichier = f"fiche_{(st.session_state.current_nom_produit or 'produit').replace(' ', '_')}.pdf"
-                st.download_button(
-                    label=T["pdf_bouton"],
-                    data=pdf_bytes,
-                    file_name=nom_fichier,
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-            except Exception as e:
-                st.warning(f"PDF indisponible : {e}")
-
-        # ============================================
-        # HISTORIQUE
-        # ============================================
-        if st.session_state.generated_products:
-            st.write("---")
-            st.markdown(f"### {T['historique']}")
-            for prod in reversed(st.session_state.generated_products):
-                with st.expander(f"📦 {prod['nom']} ({prod['langue']}) - {prod['date']}"):
-                    st.markdown(prod['contenu'])
+                nom_fichier = f"fiche_{(st.session_state
