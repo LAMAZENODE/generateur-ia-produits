@@ -376,13 +376,24 @@ def generer_pdf(contenu, nom_produit):
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
+    # 🔧 Remplace les caractères Unicode par des équivalents ASCII
+    def nettoyer(texte):
+        remplacements = {
+            "—": "-", "–": "-", "’": "'", "‘": "'",
+            "“": '"', "”": '"', "…": "...", "•": "*",
+            "€": "EUR", "\u00a0": " ",
+        }
+        for k, v in remplacements.items():
+            texte = texte.replace(k, v)
+        return texte.encode("latin-1", "replace").decode("latin-1")
+
     pdf.set_font("Helvetica", "B", 16)
-    titre_propre = f"Fiche Produit - {nom_produit}".encode("latin-1", "replace").decode("latin-1")
+    titre_propre = nettoyer(f"Fiche Produit - {nom_produit}")
     pdf.cell(0, 10, titre_propre, ln=True, align="C")
     pdf.ln(5)
 
     pdf.set_font("Helvetica", "", 11)
-    contenu_propre = contenu.encode("latin-1", "replace").decode("latin-1")
+    contenu_propre = nettoyer(contenu)
     pdf.multi_cell(0, 6, contenu_propre)
 
     return bytes(pdf.output())
@@ -596,3 +607,5 @@ if user_email:
             for prod in reversed(st.session_state.generated_products):
                 with st.expander(f"📦 {prod['nom']} ({prod['langue']}) - {prod['date']}"):
                     st.markdown(prod['contenu'])
+
+
