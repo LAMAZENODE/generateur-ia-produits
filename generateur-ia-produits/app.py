@@ -458,6 +458,7 @@ def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
 - لا تستخدم أبدًا الفواصل مثل "--" أو "---" أو "___".
 - افصل الأقسام بعناوين Markdown (##, ###).
 - استخدم النقاط بشرطة "-" فقط للقوائم.
+- تأكد من كتابة التنوين والحركات ملتصقة بالحرف السابق (مثال: مظهراً وليس مظهرا ً).
 - راجع نفسك: لا أخطاء إملائية، لا جمل ناقصة.
 - لا تضع رموز Markdown حول النص (بدون ```).
 - أجب فقط بالبطاقة النهائية، بدون أي تعليق.
@@ -534,7 +535,19 @@ def _charger_police_base64():
         return None
 
 
-def _markdown_vers_html(contenu):
+def _nettoyer_espaces_arabe(texte):
+    """Corrige les espaces parasites avant les accents arabes."""
+    remplacements = {
+        " ً": "ً", " ٍ": "ٍ", " ٌ": "ٌ",
+        " َ": "َ", " ِ": "ِ", " ُ": "ُ",
+        " ْ": "ْ", " ّ": "ّ",
+    }
+    for k, v in remplacements.items():
+        texte = texte.replace(k, v)
+    return texte
+
+
+def _markdown_vers_html(contenu, est_arabe=False):
     """Convertit une fiche Markdown simple en HTML structuré."""
     lignes_html = []
     for ligne in contenu.split("\n"):
@@ -544,6 +557,9 @@ def _markdown_vers_html(contenu):
             lignes_html.append("<br>")
             continue
 
+        if est_arabe:
+            l = _nettoyer_espaces_arabe(l)
+
         if l.startswith("### "):
             lignes_html.append(f"<h3>{l[4:]}</h3>")
         elif l.startswith("## "):
@@ -551,33 +567,21 @@ def _markdown_vers_html(contenu):
         elif l.startswith("# "):
             lignes_html.append(f"<h1>{l[2:]}</h1>")
         elif l.lstrip().startswith(("- ", "* ")):
-            lignes_html.append(f"<li>{l.lstrip()[2:]}</li>")
+            texte_puce = l.lstrip()[2:]
+            if est_arabe:
+                lignes_html.append(f'<p class="puce-ar">• {texte_puce}</p>')
+            else:
+                lignes_html.append(f'<p class="puce">• {texte_puce}</p>')
         else:
             lignes_html.append(f"<p>{l}</p>")
 
-    corps_html = ""
-    dans_ul = False
-    for item in lignes_html:
-        if item.startswith("<li>"):
-            if not dans_ul:
-                corps_html += "<ul>"
-                dans_ul = True
-            corps_html += item
-        else:
-            if dans_ul:
-                corps_html += "</ul>"
-                dans_ul = False
-            corps_html += item
-    if dans_ul:
-        corps_html += "</ul>"
-
-    return corps_html
+    return "\n".join(lignes_html)
 
 
 def generer_pdf(contenu, nom_produit, langue="Français 🇫🇷"):
     est_arabe = any(x in langue for x in ["Arabe", "Arabic", "Árabe", "🇸🇦"])
 
-    corps_html = _markdown_vers_html(contenu)
+    corps_html = _markdown_vers_html(contenu, est_arabe=est_arabe)
 
     direction = "rtl" if est_arabe else "ltr"
     align = "right" if est_arabe else "left"
@@ -639,17 +643,20 @@ def generer_pdf(contenu, nom_produit, langue="Français 🇫🇷"):
             p {{
                 margin: 8px 0;
             }}
-            ul {{
-                margin: 8px 0;
-                padding-{'right' if est_arabe else 'left'}: 25px;
+            .puce-ar {{
+                padding-right: 25px;
+                text-indent: -15px;
+                margin: 5px 0;
             }}
-            li {{
-                margin: 6px 0;
+            .puce {{
+                padding-left: 25px;
+                text-indent: -15px;
+                margin: 5px 0;
             }}
         </style>
     </head>
     <body>
-        <h1>{titre_section} - {nom_produit}</h1>
+        <h1>{titre_section} — {nom_produit}</h1>
         {corps_html}
     </body>
     </html>
