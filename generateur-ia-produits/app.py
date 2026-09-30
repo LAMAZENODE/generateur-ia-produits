@@ -6,9 +6,7 @@ import re
 import time
 import stripe
 from datetime import datetime
-from fpdf import FPDF
-import arabic_reshaper
-from bidi.algorithm import get_display
+from weasyprint import HTML
 
 # ============================================
 # CONFIGURATION DE LA PAGE
@@ -433,7 +431,6 @@ def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     est_arabe = any(x in langue for x in ["Arabe", "Arabic", "Árabe", "🇸🇦"])
 
     if est_arabe:
-        # ---------- PROMPT 100% EN ARABE ----------
         prompt = f"""
 أنت خبير في كتابة المحتوى التسويقي للتجارة الإلكترونية وتحسين محركات البحث (SEO).
 
@@ -465,7 +462,6 @@ def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
 - أجب فقط بالبطاقة النهائية، بدون أي تعليق.
 """
     else:
-        # ---------- PROMPT FR / EN / ES / DE / IT ----------
         prompt = f"""
 Tu es un expert en copywriting e-commerce et SEO.
 
@@ -525,125 +521,116 @@ Traduis TOUS les titres de sections dans cette langue.
     return f"❌ Erreur : {derniere_erreur}"
 
 # ============================================
-# 📄 GÉNÉRATION PDF (CORRIGÉE POUR L'ARABE)
+# 📄 GÉNÉRATION PDF AVEC WEASYPRINT (RTL NATIF)
 # ============================================
-def _nettoyer_arabe(texte):
-    """Remplace les caractères non supportés par Noto Naskh Arabic."""
-    remplacements = {
-        "’": "'", "‘": "'",
-        "“": '"', "”": '"',
-        "…": "...",
-        "€": "يورو",
-        "—": "-", "–": "-",
-        "\u00a0": " ",
-    }
-    for k, v in remplacements.items():
-        texte = texte.replace(k, v)
-    return texte
+def _markdown_vers_html(contenu):
+    """Convertit une fiche Markdown simple en HTML structuré."""
+    lignes_html = []
+    for ligne in contenu.split("\n"):
+        l = ligne.rstrip()
 
+        if not l.strip():
+            lignes_html.append("<br>")
+            continue
 
-def _corriger_arabe(texte):
-    """Corrige la forme et l'ordre des lettres arabes pour FPDF (RTL)."""
-    try:
-        return get_display(arabic_reshaper.reshape(texte))
-    except Exception:
-        return texte
+        if l.startswith("### "):
+            lignes_html.append(f"<h3>{l[4:]}</h3>")
+        elif l.startswith("## "):
+            lignes_html.append(f"<h2>{l[3:]}</h2>")
+        elif l.startswith("# "):
+            lignes_html.append(f"<h1>{l[2:]}</h1>")
+        elif l.lstrip().startswith(("- ", "* ")):
+            lignes_html.append(f"<li>{l.lstrip()[2:]}</li>")
+        else:
+            lignes_html.append(f"<p>{l}</p>")
+
+    # Regroupe les <li> successifs dans un <ul>
+    corps_html = ""
+    dans_ul = False
+    for item in lignes_html:
+        if item.startswith("<li>"):
+            if not dans_ul:
+                corps_html += "<ul>"
+                dans_ul = True
+            corps_html += item
+        else:
+            if dans_ul:
+                corps_html += "</ul>"
+                dans_ul = False
+            corps_html += item
+    if dans_ul:
+        corps_html += "</ul>"
+
+    return corps_html
 
 
 def generer_pdf(contenu, nom_produit, langue="Français 🇫🇷"):
     est_arabe = any(x in langue for x in ["Arabe", "Arabic", "Árabe", "🇸🇦"])
 
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_margins(15, 15, 15)
+    corps_html = _markdown_vers_html(contenu)
 
-    # Largeur utile = largeur page - marges gauche/droite
-    largeur_utile = pdf.w - pdf.l_margin - pdf.r_margin
+    direction = "rtl" if est_arabe else "ltr"
+    align = "right" if est_arabe else "left"
+    titre_section = "بطاقة المنتج" if est_arabe else "Fiche Produit"
 
-    if est_arabe:
-        # --- Chargement de la police arabe ---
-        try:
-            pdf.add_font("NotoNaskhArabic", "", "NotoNaskhArabic-Regular.ttf")
-        except Exception as e:
-            pdf.set_font("Helvetica", "B", 14)
-            pdf.cell(largeur_utile, 10,
-                     "Erreur : NotoNaskhArabic-Regular.ttf introuvable.",
-                     ln=True)
-            pdf.set_font("Helvetica", "", 11)
-            pdf.multi_cell(largeur_utile, 6, f"Details: {e}")
-            return bytes(pdf.output())
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            @page {{
+                margin: 2cm;
+                size: A4;
+            }}
+            body {{
+                font-family: 'Noto Naskh Arabic', 'Amiri', 'DejaVu Sans', Arial, sans-serif;
+                direction: {direction};
+                text-align: {align};
+                font-size: 12pt;
+                line-height: 1.7;
+                color: #333333;
+            }}
+            h1 {{
+                font-size: 20pt;
+                color: #4c1d95;
+                margin-bottom: 8px;
+                margin-top: 0;
+            }}
+            h2 {{
+                font-size: 16pt;
+                color: #6b21a8;
+                margin-top: 22px;
+                margin-bottom: 10px;
+                border-bottom: 1px solid #e9d5ff;
+                padding-bottom: 4px;
+            }}
+            h3 {{
+                font-size: 14pt;
+                color: #7c3aed;
+                margin-top: 16px;
+                margin-bottom: 8px;
+            }}
+            p {{
+                margin: 8px 0;
+            }}
+            ul {{
+                margin: 8px 0;
+                padding-{'right' if est_arabe else 'left'}: 25px;
+            }}
+            li {{
+                margin: 6px 0;
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>{titre_section} - {nom_produit}</h1>
+        {corps_html}
+    </body>
+    </html>
+    """
 
-        # ---- Titre (arabe + nom du produit) ----
-        pdf.set_font("NotoNaskhArabic", size=16)
-        titre = f"بطاقة المنتج - {nom_produit}"
-        pdf.multi_cell(largeur_utile, 10,
-                       _corriger_arabe(_nettoyer_arabe(titre)),
-                       align="R")
-        pdf.ln(4)
-
-        # ---- Contenu ligne par ligne ----
-        pdf.set_font("NotoNaskhArabic", size=12)
-        for ligne in contenu.split("\n"):
-            ligne = ligne.rstrip()
-            if not ligne.strip():
-                pdf.ln(3)
-                continue
-
-            # Nettoyer + corriger l'arabe de la ligne
-            ligne_propre = _nettoyer_arabe(ligne)
-
-            if ligne_propre.startswith("### "):
-                pdf.set_font("NotoNaskhArabic", size=13)
-                pdf.multi_cell(largeur_utile, 8,
-                               _corriger_arabe(ligne_propre[4:]), align="R")
-                pdf.set_font("NotoNaskhArabic", size=12)
-
-            elif ligne_propre.startswith("## "):
-                pdf.set_font("NotoNaskhArabic", size=14)
-                pdf.multi_cell(largeur_utile, 9,
-                               _corriger_arabe(ligne_propre[3:]), align="R")
-                pdf.set_font("NotoNaskhArabic", size=12)
-
-            elif ligne_propre.startswith("# "):
-                pdf.set_font("NotoNaskhArabic", size=15)
-                pdf.multi_cell(largeur_utile, 10,
-                               _corriger_arabe(ligne_propre[2:]), align="R")
-                pdf.set_font("NotoNaskhArabic", size=12)
-
-            elif ligne_propre.lstrip().startswith(("- ", "* ")):
-                # Puce : on corrige le texte SANS la puce, puis on ajoute "• "
-                texte_sans_puce = ligne_propre.lstrip()[2:]
-                texte_corrige = _corriger_arabe(texte_sans_puce)
-                pdf.multi_cell(largeur_utile, 7,
-                               "• " + texte_corrige, align="R")
-
-            else:
-                pdf.multi_cell(largeur_utile, 7,
-                               _corriger_arabe(ligne_propre), align="R")
-
-    else:
-        # --- Latin (FR / EN / ES / DE / IT) ---
-        def nettoyer_latin(texte):
-            remplacements = {
-                "—": "-", "–": "-", "’": "'", "‘": "'",
-                "“": '"', "”": '"', "…": "...", "•": "*",
-                "€": "EUR", "\u00a0": " ",
-            }
-            for k, v in remplacements.items():
-                texte = texte.replace(k, v)
-            return texte.encode("latin-1", "replace").decode("latin-1")
-
-        pdf.set_font("Helvetica", "B", 16)
-        pdf.cell(largeur_utile, 10,
-                 nettoyer_latin(f"Fiche Produit - {nom_produit}"),
-                 ln=True, align="C")
-        pdf.ln(5)
-
-        pdf.set_font("Helvetica", "", 11)
-        pdf.multi_cell(largeur_utile, 6, nettoyer_latin(contenu))
-
-    return bytes(pdf.output())
+    return HTML(string=html).write_pdf()
 
 # ============================================
 # 🌍 INTERFACE
@@ -863,3 +850,5 @@ if user_email:
             for prod in reversed(st.session_state.generated_products):
                 with st.expander(f"📦 {prod['nom']} ({prod['langue']}) - {prod['date']}"):
                     st.markdown(prod['contenu'])
+
+
