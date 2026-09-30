@@ -7,6 +7,8 @@ import time
 import stripe
 from datetime import datetime
 from fpdf import FPDF
+import arabic_reshaper
+from bidi.algorithm import get_display
 
 # ============================================
 # CONFIGURATION DE LA PAGE
@@ -36,14 +38,11 @@ if query_params.get("payment") == "success":
 # ============================================
 st.markdown("""
 <style>
-    /* ===== FOND GÉNÉRAL : VIOLET CLAIR ===== */
     .stApp {
         background: linear-gradient(135deg, #c7d2fe 0%, #d8b4fe 50%, #e9d5ff 100%);
         background-attachment: fixed;
         min-height: 100vh;
     }
-
-    /* ===== CARTE PRINCIPALE ===== */
     .main .block-container {
         background: rgba(255, 255, 255, 0.88);
         backdrop-filter: blur(6px);
@@ -55,8 +54,6 @@ st.markdown("""
         box-shadow: 0 20px 60px rgba(102, 126, 234, 0.25);
         border: 1px solid rgba(255, 255, 255, 0.6);
     }
-
-    /* ===== TITRES ===== */
     h1 {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
@@ -68,16 +65,12 @@ st.markdown("""
         color: #4c1d95 !important;
         font-weight: 700 !important;
     }
-
-    /* ===== TEXTES GÉNÉRAUX ===== */
     .stApp p, .stApp label, .stApp span, .stApp div {
         color: #3b0764;
     }
     .stApp .stCaption, .stApp small {
         color: #6b21a8 !important;
     }
-
-    /* ===== BOUTONS ===== */
     .stButton button {
         border-radius: 12px !important;
         padding: 14px !important;
@@ -94,8 +87,6 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 8px 25px rgba(124, 58, 237, 0.65);
     }
-
-    /* ===== LIEN BOUTON ===== */
     .stLinkButton a {
         display: block !important;
         text-align: center !important;
@@ -108,8 +99,6 @@ st.markdown("""
         width: 100% !important;
         box-shadow: 0 4px 15px rgba(124, 58, 237, 0.45);
     }
-
-    /* ===== CHAMPS DE SAISIE ===== */
     .stTextInput input, .stTextArea textarea {
         font-size: 16px !important;
         padding: 12px !important;
@@ -122,16 +111,12 @@ st.markdown("""
         border-color: #7c3aed !important;
         box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2) !important;
     }
-
-    /* ===== SELECTBOX ===== */
     .stSelectbox div[data-baseweb="select"] > div {
         background: #ffffff !important;
         border-radius: 10px !important;
         border: 2px solid #c4b5fd !important;
         color: #3b0764 !important;
     }
-
-    /* ===== MÉTRIQUES ===== */
     .stMetric {
         background: rgba(255, 255, 255, 0.9);
         padding: 20px 15px;
@@ -148,8 +133,6 @@ st.markdown("""
         color: #3b0764 !important;
         font-weight: 800 !important;
     }
-
-    /* ===== BADGE PROMO ===== */
     .promo-badge {
         background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
         color: white;
@@ -161,8 +144,6 @@ st.markdown("""
         font-size: 16px;
         box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
     }
-
-    /* ===== BOÎTE RÉSULTAT ===== */
     .result-box {
         background: rgba(255, 255, 255, 0.95);
         padding: 25px;
@@ -173,8 +154,6 @@ st.markdown("""
         color: #3b0764;
         box-shadow: 0 4px 15px rgba(124, 58, 237, 0.15);
     }
-
-    /* ===== BOÎTE PAIEMENT ===== */
     .payment-box {
         background: rgba(255, 255, 255, 0.95);
         padding: 25px;
@@ -194,13 +173,9 @@ st.markdown("""
         font-weight: 700;
         margin: 15px 0;
     }
-
-    /* ===== ALERTES ===== */
     div[data-testid="stAlert"] {
         border-radius: 12px;
     }
-
-    /* ===== RESPONSIVE MOBILE ===== */
     @media (max-width: 768px) {
         .main .block-container {
             padding: 1rem;
@@ -376,10 +351,6 @@ except Exception as e:
 # ============================================
 @st.cache_resource(show_spinner=False)
 def obtenir_modeles_disponibles():
-    """
-    Récupère dynamiquement la liste des modèles qui supportent generateContent.
-    Triés par préférence : flash > pro, puis 2.5 > 2.0 > 1.5.
-    """
     try:
         noms = []
         for m in client.models.list():
@@ -456,14 +427,53 @@ if "cache_fiche" not in st.session_state:
     st.session_state.cache_fiche = {}
 
 # ============================================
-# 🤖 GÉNÉRATION IA (AUTO-DÉCOUVERTE + RETRY)
+# 🤖 GÉNÉRATION IA (PROMPT ARABE DÉDIÉ + RETRY)
 # ============================================
 def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
-    prompt = f"""
+    est_arabe = any(x in langue for x in ["Arabe", "Arabic", "Árabe", "🇸🇦"])
+
+    if est_arabe:
+        # ---------- PROMPT 100% EN ARABE ----------
+        prompt = f"""
+أنت خبير في كتابة المحتوى التسويقي للتجارة الإلكترونية وتحسين محركات البحث (SEO).
+
+اكتب بطاقة منتج جذابة ومحسّنة للتحويل وSEO.
+⚠️ يجب أن تكون البطاقة بالكامل باللغة العربية الفصحى. لا تستخدم أي لغة أخرى أبدًا.
+
+=== معلومات المنتج ===
+- الاسم: {nom}
+- الخصائص: {caracteristiques}
+- النبرة: {ton}
+- الطول: {longueur}
+- كلمات مفتاحية SEO: {mots_cles}
+
+=== البنية المطلوبة ===
+1. عنوان H1 جذاب (أقل من 70 حرفًا)
+2. عنوان فرعي يبرز الفائدة (أقل من 120 حرفًا)
+3. مقدمة من 2-3 جمل تركز على فوائد العميل
+4. قسم "لماذا تختار هذا المنتج؟" مع 4 نقاط
+5. قسم "المواصفات الرئيسية" مع 4 نقاط
+6. دعوة نهائية قوية لاتخاذ إجراء
+
+=== قواعد صارمة ===
+- اكتب كل النص بالعربية فقط، بما في ذلك عناوين الأقسام.
+- لا تستخدم أبدًا الفواصل مثل "--" أو "---" أو "___".
+- افصل الأقسام بعناوين Markdown (##, ###).
+- استخدم النقاط بشرطة "-" فقط للقوائم.
+- راجع نفسك: لا أخطاء إملائية، لا جمل ناقصة.
+- لا تضع رموز Markdown حول النص (بدون ```).
+- أجب فقط بالبطاقة النهائية، بدون أي تعليق.
+"""
+    else:
+        # ---------- PROMPT FR / EN / ES / DE / IT ----------
+        prompt = f"""
 Tu es un expert en copywriting e-commerce et SEO.
 
 Rédige une fiche produit captivante, optimisée pour la conversion et le référencement.
 LA FICHE DOIT ÊTRE ENTIÈREMENT RÉDIGÉE EN : {langue}.
+
+⚠️ RÈGLE ABSOLUE : Utilise UNIQUEMENT la langue demandée ({langue}) dans TOUT le texte.
+Traduis TOUS les titres de sections dans cette langue.
 
 === INFORMATIONS PRODUIT ===
 - Nom : {nom}
@@ -481,6 +491,7 @@ LA FICHE DOIT ÊTRE ENTIÈREMENT RÉDIGÉE EN : {langue}.
 6. Un appel à l'action final percutant
 
 === RÈGLES STRICTES ===
+- TOUT le texte doit être dans la langue demandée ({langue}), sans exception.
 - N'utilise JAMAIS de séparateurs comme "--", "---" ou "___".
 - Sépare les sections par des titres Markdown (##, ###).
 - Utilise des puces avec "-" uniquement pour les listes.
@@ -514,31 +525,123 @@ LA FICHE DOIT ÊTRE ENTIÈREMENT RÉDIGÉE EN : {langue}.
     return f"❌ Erreur : {derniere_erreur}"
 
 # ============================================
-# 📄 GÉNÉRATION PDF
+# 📄 GÉNÉRATION PDF (CORRIGÉE POUR L'ARABE)
 # ============================================
-def generer_pdf(contenu, nom_produit):
+def _nettoyer_arabe(texte):
+    """Remplace les caractères non supportés par Noto Naskh Arabic."""
+    remplacements = {
+        "’": "'", "‘": "'",
+        "“": '"', "”": '"',
+        "…": "...",
+        "€": "يورو",
+        "—": "-", "–": "-",
+        "\u00a0": " ",
+    }
+    for k, v in remplacements.items():
+        texte = texte.replace(k, v)
+    return texte
+
+
+def _corriger_arabe(texte):
+    """Corrige la forme et l'ordre des lettres arabes pour FPDF (RTL)."""
+    try:
+        return get_display(arabic_reshaper.reshape(texte))
+    except Exception:
+        return texte
+
+
+def generer_pdf(contenu, nom_produit, langue="Français 🇫🇷"):
+    est_arabe = any(x in langue for x in ["Arabe", "Arabic", "Árabe", "🇸🇦"])
+
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_margins(15, 15, 15)
 
-    def nettoyer(texte):
-        remplacements = {
-            "—": "-", "–": "-", "’": "'", "‘": "'",
-            "“": '"', "”": '"', "…": "...", "•": "*",
-            "€": "EUR", "\u00a0": " ",
-        }
-        for k, v in remplacements.items():
-            texte = texte.replace(k, v)
-        return texte.encode("latin-1", "replace").decode("latin-1")
+    # Largeur utile = largeur page - marges gauche/droite
+    largeur_utile = pdf.w - pdf.l_margin - pdf.r_margin
 
-    pdf.set_font("Helvetica", "B", 16)
-    titre_propre = nettoyer(f"Fiche Produit - {nom_produit}")
-    pdf.cell(0, 10, titre_propre, ln=True, align="C")
-    pdf.ln(5)
+    if est_arabe:
+        # --- Chargement de la police arabe ---
+        try:
+            pdf.add_font("NotoNaskhArabic", "", "NotoNaskhArabic-Regular.ttf")
+        except Exception as e:
+            pdf.set_font("Helvetica", "B", 14)
+            pdf.cell(largeur_utile, 10,
+                     "Erreur : NotoNaskhArabic-Regular.ttf introuvable.",
+                     ln=True)
+            pdf.set_font("Helvetica", "", 11)
+            pdf.multi_cell(largeur_utile, 6, f"Details: {e}")
+            return bytes(pdf.output())
 
-    pdf.set_font("Helvetica", "", 11)
-    contenu_propre = nettoyer(contenu)
-    pdf.multi_cell(0, 6, contenu_propre)
+        # ---- Titre (arabe + nom du produit) ----
+        pdf.set_font("NotoNaskhArabic", size=16)
+        titre = f"بطاقة المنتج - {nom_produit}"
+        pdf.multi_cell(largeur_utile, 10,
+                       _corriger_arabe(_nettoyer_arabe(titre)),
+                       align="R")
+        pdf.ln(4)
+
+        # ---- Contenu ligne par ligne ----
+        pdf.set_font("NotoNaskhArabic", size=12)
+        for ligne in contenu.split("\n"):
+            ligne = ligne.rstrip()
+            if not ligne.strip():
+                pdf.ln(3)
+                continue
+
+            # Nettoyer + corriger l'arabe de la ligne
+            ligne_propre = _nettoyer_arabe(ligne)
+
+            if ligne_propre.startswith("### "):
+                pdf.set_font("NotoNaskhArabic", size=13)
+                pdf.multi_cell(largeur_utile, 8,
+                               _corriger_arabe(ligne_propre[4:]), align="R")
+                pdf.set_font("NotoNaskhArabic", size=12)
+
+            elif ligne_propre.startswith("## "):
+                pdf.set_font("NotoNaskhArabic", size=14)
+                pdf.multi_cell(largeur_utile, 9,
+                               _corriger_arabe(ligne_propre[3:]), align="R")
+                pdf.set_font("NotoNaskhArabic", size=12)
+
+            elif ligne_propre.startswith("# "):
+                pdf.set_font("NotoNaskhArabic", size=15)
+                pdf.multi_cell(largeur_utile, 10,
+                               _corriger_arabe(ligne_propre[2:]), align="R")
+                pdf.set_font("NotoNaskhArabic", size=12)
+
+            elif ligne_propre.lstrip().startswith(("- ", "* ")):
+                # Puce : on corrige le texte SANS la puce, puis on ajoute "• "
+                texte_sans_puce = ligne_propre.lstrip()[2:]
+                texte_corrige = _corriger_arabe(texte_sans_puce)
+                pdf.multi_cell(largeur_utile, 7,
+                               "• " + texte_corrige, align="R")
+
+            else:
+                pdf.multi_cell(largeur_utile, 7,
+                               _corriger_arabe(ligne_propre), align="R")
+
+    else:
+        # --- Latin (FR / EN / ES / DE / IT) ---
+        def nettoyer_latin(texte):
+            remplacements = {
+                "—": "-", "–": "-", "’": "'", "‘": "'",
+                "“": '"', "”": '"', "…": "...", "•": "*",
+                "€": "EUR", "\u00a0": " ",
+            }
+            for k, v in remplacements.items():
+                texte = texte.replace(k, v)
+            return texte.encode("latin-1", "replace").decode("latin-1")
+
+        pdf.set_font("Helvetica", "B", 16)
+        pdf.cell(largeur_utile, 10,
+                 nettoyer_latin(f"Fiche Produit - {nom_produit}"),
+                 ln=True, align="C")
+        pdf.ln(5)
+
+        pdf.set_font("Helvetica", "", 11)
+        pdf.multi_cell(largeur_utile, 6, nettoyer_latin(contenu))
 
     return bytes(pdf.output())
 
@@ -734,7 +837,8 @@ if user_email:
             try:
                 pdf_bytes = generer_pdf(
                     st.session_state.current_result,
-                    st.session_state.current_nom_produit or "produit"
+                    st.session_state.current_nom_produit or "produit",
+                    langue=langue_choisie
                 )
 
                 nom_base = st.session_state.current_nom_produit or "produit"
