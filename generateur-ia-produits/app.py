@@ -4,6 +4,7 @@ import json
 import os
 import re
 import time
+import base64
 import stripe
 from datetime import datetime
 from weasyprint import HTML
@@ -521,8 +522,18 @@ Traduis TOUS les titres de sections dans cette langue.
     return f"❌ Erreur : {derniere_erreur}"
 
 # ============================================
-# 📄 GÉNÉRATION PDF AVEC WEASYPRINT (RTL NATIF)
+# 📄 GÉNÉRATION PDF AVEC WEASYPRINT (RTL NATIF + POLICE EMBARQUÉE)
 # ============================================
+@st.cache_resource(show_spinner=False)
+def _charger_police_base64():
+    """Charge la police arabe en base64 pour l'intégrer dans le HTML."""
+    try:
+        with open("NotoNaskhArabic-Regular.ttf", "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+    except Exception:
+        return None
+
+
 def _markdown_vers_html(contenu):
     """Convertit une fiche Markdown simple en HTML structuré."""
     lignes_html = []
@@ -544,7 +555,6 @@ def _markdown_vers_html(contenu):
         else:
             lignes_html.append(f"<p>{l}</p>")
 
-    # Regroupe les <li> successifs dans un <ul>
     corps_html = ""
     dans_ul = False
     for item in lignes_html:
@@ -573,22 +583,37 @@ def generer_pdf(contenu, nom_produit, langue="Français 🇫🇷"):
     align = "right" if est_arabe else "left"
     titre_section = "بطاقة المنتج" if est_arabe else "Fiche Produit"
 
+    # Police embarquée en base64
+    police_b64 = _charger_police_base64()
+    font_face = ""
+    if police_b64:
+        font_face = f"""
+        @font-face {{
+            font-family: 'NotoArabicEmbedded';
+            src: url(data:font/ttf;base64,{police_b64}) format('truetype');
+        }}
+        """
+        police_css = "'NotoArabicEmbedded', 'DejaVu Sans', Arial, sans-serif"
+    else:
+        police_css = "'Noto Naskh Arabic', 'Amiri', 'DejaVu Sans', Arial, sans-serif"
+
     html = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="utf-8">
         <style>
+            {font_face}
             @page {{
                 margin: 2cm;
                 size: A4;
             }}
             body {{
-                font-family: 'Noto Naskh Arabic', 'Amiri', 'DejaVu Sans', Arial, sans-serif;
+                font-family: {police_css};
                 direction: {direction};
                 text-align: {align};
                 font-size: 12pt;
-                line-height: 1.7;
+                line-height: 1.8;
                 color: #333333;
             }}
             h1 {{
@@ -850,5 +875,3 @@ if user_email:
             for prod in reversed(st.session_state.generated_products):
                 with st.expander(f"📦 {prod['nom']} ({prod['langue']}) - {prod['date']}"):
                     st.markdown(prod['contenu'])
-
-
