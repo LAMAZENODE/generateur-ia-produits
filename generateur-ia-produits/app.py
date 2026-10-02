@@ -761,7 +761,7 @@ if user_email:
                     try:
                         locale_stripe = LOCALES_STRIPE.get(langue_interface, "auto")
                         session_stripe = stripe.checkout.Session.create(
-                            payment_method_types=['card'],
+                         
                             line_items=[{'price': STRIPE_PRICE_ID, 'quantity': 1}],
                             mode='payment',
                             success_url=f"{MON_URL_STREAMLIT}?payment=success&email={user_email}",
