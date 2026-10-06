@@ -688,12 +688,11 @@ st.markdown(f'<div class="promo-badge">{T["promo"]}</div>', unsafe_allow_html=Tr
 st.title(T["titre"])
 st.subheader(T["sous_titre"])
 
-col_m1, col_m2, col_m3 = st.columns(3)
+
+col_m1, col_m2 = st.columns(2)
 with col_m1:
     st.metric(label=T["metric_fiches"], value=st.session_state.generations)
 with col_m2:
-    st.metric(label=T["metric_users"], value=f"{st.session_state.user_count} (+12)")
-with col_m3:
     st.metric(label=T["metric_prix"], value="0,99 €")
 
 st.write("---")
