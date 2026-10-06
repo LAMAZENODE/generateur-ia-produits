@@ -8,7 +8,6 @@ import base64
 import stripe
 from datetime import datetime
 from weasyprint import HTML
-from supabase import create_client
 
 # ============================================
 # CONFIGURATION DE LA PAGE
@@ -21,74 +20,17 @@ st.set_page_config(
 )
 
 # ============================================
-# SECRETS & API (AVANT tout appel)
-# ============================================
-try:
-    STRIPE_SECRET_KEY = st.secrets["STRIPE_SECRET_KEY"]
-    STRIPE_PRICE_ID = st.secrets["STRIPE_PRICE_ID"]
-    MON_URL_STREAMLIT = st.secrets["MON_URL_STREAMLIT"]
-    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-    SUPABASE_URL = st.secrets["SUPABASE_URL"]
-    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-    stripe.api_key = STRIPE_SECRET_KEY
-except KeyError as e:
-    st.error(f"❌ Secret manquant : {e}")
-    st.stop()
-
-try:
-    client = genai.Client(api_key=GEMINI_API_KEY)
-except Exception as e:
-    st.error(f"❌ Erreur API Gemini : {e}")
-    st.stop()
-
-try:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-except Exception as e:
-    st.error(f"❌ Erreur Supabase : {e}")
-    st.stop()
-
-# ============================================
-# 🔓 TRAITEMENT DU RETOUR PAIEMENT STRIPE (VÉRIFIÉ)
+# 🔓 TRAITEMENT DU RETOUR PAIEMENT STRIPE
 # ============================================
 query_params = st.query_params
 
-if "paiement_verifie" not in st.session_state:
-    st.session_state.paiement_verifie = False
+if "emails_payes" not in st.session_state:
+    st.session_state.emails_payes = []
 
 if query_params.get("payment") == "success":
-    email_retour = query_params.get("email", "")
-    session_id = query_params.get("session_id", "")
-
-    if not session_id:
-        st.error("❌ Paiement invalide : identifiant de session manquant.")
-    else:
-        # Vérifier que ce paiement n'a pas déjà été traité
-        deja_traite = (
-            supabase.table("paiements")
-            .select("id")
-            .eq("session_id", session_id)
-            .execute()
-        )
-
-        if deja_traite.data:
-            st.session_state.paiement_verifie = True
-        else:
-            try:
-                checkout = stripe.checkout.Session.retrieve(session_id)
-
-                if checkout.payment_status != "paid":
-                    st.error("❌ Le paiement n'a pas été confirmé par Stripe.")
-                elif checkout.customer_email and checkout.customer_email.lower() != email_retour.lower():
-                    st.error("❌ Email de paiement incohérent.")
-                else:
-                    supabase.table("paiements").insert({
-                        "email": email_retour.lower(),
-                        "session_id": session_id,
-                        "montant": checkout.amount_total or 0,
-                    }).execute()
-                    st.session_state.paiement_verifie = True
-            except Exception as e:
-                st.error(f"❌ Impossible de vérifier le paiement : {e}")
+    email_paye = query_params.get("email", "")
+    if email_paye and email_paye not in st.session_state.emails_payes:
+        st.session_state.emails_payes.append(email_paye)
 
 # ============================================
 # 🎨 CSS MODERNE — THÈME VIOLET CLAIR
@@ -211,6 +153,14 @@ st.markdown("""
         color: #3b0764;
         box-shadow: 0 4px 15px rgba(124, 58, 237, 0.15);
     }
+    .payment-box {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 25px;
+        border-radius: 15px;
+        border: 2px solid #7c3aed;
+        margin-top: 20px;
+        text-align: center;
+    }
     .pay-btn {
         display: block;
         text-align: center;
@@ -221,6 +171,9 @@ st.markdown("""
         text-decoration: none;
         font-weight: 700;
         margin: 15px 0;
+    }
+    div[data-testid="stAlert"] {
+        border-radius: 12px;
     }
     @media (max-width: 768px) {
         .main .block-container {
@@ -233,18 +186,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================
-# 🌍 TRADUCTIONS (une seule langue pilote tout)
+# 🌍 TRADUCTIONS
 # ============================================
 TEXTES = {
     "Français 🇫🇷": {
-        "promo": "🎁 Votre 1ère fiche 100% Gratuite · Puis 4,90 € par fiche",
-        "titre": "🛍️ Générateur de Fiches Produit",
-        "sous_titre": "Des fiches produits optimisées SEO en 30 secondes, prêtes à publier.",
-        "metric_fiches": "📝 Fiches générées (session)",
-        "metric_status": "🚀 Statut",
-        "metric_status_val": "Nouveau",
+        "promo": "🎁 Votre 1ère fiche 100% Gratuite · Puis Offre flash : 5 fiches pour le prix de 4 !",
+        "titre": "🛍️ Fiche Produit",
+        "sous_titre": "Générez des fiches produits professionnelles en 30 secondes",
+        "metric_fiches": "📝 Vos Fiches Générées",
+        "metric_users": "👥 Utilisateurs Actifs",
         "metric_prix": "💰 Prix par fiche",
-        "metric_prix_val": "4,90 €",
         "etape1": "🔑 Étape 1 : Entrez votre adresse e-mail",
         "label_email": "Votre e-mail pour activer ou suivre vos fiches *",
         "email_placeholder": "exemple@domaine.com",
@@ -252,44 +203,42 @@ TEXTES = {
         "nom_produit": "Nom du produit *",
         "nom_produit_ph": "Ex: Sac en cuir",
         "caracs": "Caractéristiques *",
-        "caracs_ph": "Ex: Cuir véritable, noir, 30x20cm",
-        "langue_fiche": "🌐 Langue (interface + fiche)",
+        "caracs_ph": "Ex: Cuir véritable, noir",
+        "langue_fiche": "📝 Langue de la fiche produit",
         "ton": "Ton éditorial",
         "longueur": "Longueur de la fiche",
         "options_ton": ["Professionnel", "Luxe", "Chaleureux", "Minimaliste"],
         "options_longueur": ["Courte", "Moyenne", "Détaillée"],
-        "options_langue": ["Français 🇫🇷", "Anglais 🇬🇧", "Espagnol 🇪🇸", "Allemand 🇩🇪", "Italien 🇮🇹", "Arabe 🇸🇦"],
+        "options_langue_fiche": ["Français 🇫🇷", "Anglais 🇬🇧", "Espagnol 🇪🇸", "Allemand 🇩🇪", "Italien 🇮🇹", "Arabe 🇸🇦"],
         "options": "⚙️ Options avancées",
         "mots_cles": "Mots-clés SEO",
-        "mots_cles_ph": "Ex: sac cuir durable",
-        "btn_gratuit": "🚀 Générer ma fiche gratuite (1ère offerte)",
-        "btn_payant": "💳 Payer 4,90 € et générer ma fiche",
-        "essai_ok": "🎉 Bonne nouvelle : votre **1ère fiche est offerte**.",
-        "essai_utilise": "ℹ️ Essai déjà utilisé. Fiche suivante : **4,90 €**.",
+        "mots_cles_ph": "Ex: sac durable",
+        "btn_gratuit": "🚀 Générer ma fiche gratuite (Essai offert)",
+        "btn_payant": "💳 Payer et générer ma fiche (0,99 €)",
+        "essai_ok": "🎉 Bonne nouvelle ! Vous bénéficiez d'un **essai gratuit (1 fiche offerte)**.",
+        "essai_utilise": "ℹ️ Essai déjà consommé. Prochaines fiches : **0,99 €**.",
         "email_invalide": "❌ Veuillez entrer une adresse e-mail valide.",
         "genere_ok": "✨ Votre fiche a été générée avec succès !",
         "genere_spinner": "🤖 Génération en cours...",
         "resultat": "✨ Votre fiche produit générée :",
-        "historique": "📋 Vos fiches générées (session)",
+        "historique": "📋 Vos fiches générées",
         "remplir_champs": "⚠️ Veuillez remplir le nom et les caractéristiques.",
         "paiement_titre": "💳 Paiement sécurisé prêt !",
-        "paiement_bouton": "🔒 Payer maintenant 4,90 € sur Stripe",
+        "paiement_bouton": "🔒 Payer maintenant 0,99 € sur Stripe",
         "paiement_info": "Paiement 100% sécurisé par Stripe.",
         "paiement_erreur": "❌ Erreur Stripe :",
         "paiement_ok": "🎉 Paiement confirmé ! Complétez le formulaire pour générer votre fiche.",
         "pdf_bouton": "📄 Télécharger en PDF",
-        "surcharge": "⏳ Service momentanément surchargé. Réessayez dans 1-2 min. Votre essai **n'a pas** été consommé.",
-        "aucun_modele": "❌ Aucun modèle Gemini disponible. Vérifiez vos secrets.",
+        "surcharge": "⏳ Le service est momentanément surchargé. Merci de réessayer dans 1 à 2 minutes. Votre essai gratuit n'a **pas** été consommé.",
+        "aucun_modele": "❌ Aucun modèle Gemini disponible pour votre clé API. Vérifiez vos secrets.",
     },
     "Anglais 🇬🇧": {
-        "promo": "🎁 Your 1st sheet 100% Free · Then €4.90 per sheet",
-        "titre": "🛍️ Product Sheet Generator",
-        "sous_titre": "SEO-optimized product sheets in 30 seconds, ready to publish.",
-        "metric_fiches": "📝 Sheets generated (session)",
-        "metric_status": "🚀 Status",
-        "metric_status_val": "New",
+        "promo": "🎁 Your 1st sheet 100% Free · Then Flash offer: 5 sheets for the price of 4!",
+        "titre": "🛍️ Product Sheet",
+        "sous_titre": "Generate professional product sheets in 30 seconds",
+        "metric_fiches": "📝 Your Generated Sheets",
+        "metric_users": "👥 Active Users",
         "metric_prix": "💰 Price per sheet",
-        "metric_prix_val": "€4.90",
         "etape1": "🔑 Step 1: Enter your email address",
         "label_email": "Your email to activate or track your sheets *",
         "email_placeholder": "example@domain.com",
@@ -297,44 +246,42 @@ TEXTES = {
         "nom_produit": "Product name *",
         "nom_produit_ph": "Ex: Leather bag",
         "caracs": "Features *",
-        "caracs_ph": "Ex: Genuine leather, black, 30x20cm",
-        "langue_fiche": "🌐 Language (interface + sheet)",
+        "caracs_ph": "Ex: Genuine leather, black",
+        "langue_fiche": "📝 Product sheet language",
         "ton": "Editorial tone",
         "longueur": "Sheet length",
         "options_ton": ["Professional", "Luxury", "Warm", "Minimalist"],
         "options_longueur": ["Short", "Medium", "Detailed"],
-        "options_langue": ["French 🇫🇷", "English 🇬🇧", "Spanish 🇪🇸", "German 🇩🇪", "Italian 🇮🇹", "Arabic 🇸🇦"],
+        "options_langue_fiche": ["French 🇫🇷", "English 🇬🇧", "Spanish 🇪🇸", "German 🇩🇪", "Italian 🇮🇹", "Arabic 🇸🇦"],
         "options": "⚙️ Advanced options",
         "mots_cles": "SEO keywords",
-        "mots_cles_ph": "Ex: durable leather bag",
-        "btn_gratuit": "🚀 Generate my free sheet (1st offered)",
-        "btn_payant": "💳 Pay €4.90 and generate my sheet",
-        "essai_ok": "🎉 Good news: your **1st sheet is free**.",
-        "essai_utilise": "ℹ️ Trial already used. Next sheet: **€4.90**.",
+        "mots_cles_ph": "Ex: durable bag",
+        "btn_gratuit": "🚀 Generate my free sheet (Free trial)",
+        "btn_payant": "💳 Pay and generate my sheet (€0.99)",
+        "essai_ok": "🎉 Good news! You get a **free trial (1 sheet offered)**.",
+        "essai_utilise": "ℹ️ Trial already used. Next sheets: **€0.99**.",
         "email_invalide": "❌ Please enter a valid email address.",
-        "genere_ok": "✨ Your sheet was generated successfully!",
+        "genere_ok": "✨ Your sheet has been generated successfully!",
         "genere_spinner": "🤖 Generating...",
         "resultat": "✨ Your generated product sheet:",
-        "historique": "📋 Your generated sheets (session)",
+        "historique": "📋 Your generated sheets",
         "remplir_champs": "⚠️ Please fill in the name and features.",
         "paiement_titre": "💳 Secure payment ready!",
-        "paiement_bouton": "🔒 Pay now €4.90 on Stripe",
+        "paiement_bouton": "🔒 Pay now €0.99 on Stripe",
         "paiement_info": "100% secure payment by Stripe.",
         "paiement_erreur": "❌ Stripe error:",
         "paiement_ok": "🎉 Payment confirmed! Complete the form to generate your sheet.",
         "pdf_bouton": "📄 Download PDF",
-        "surcharge": "⏳ Service temporarily overloaded. Try again in 1-2 min. Your trial was **not** consumed.",
-        "aucun_modele": "❌ No Gemini model available. Check your secrets.",
+        "surcharge": "⏳ The service is temporarily overloaded. Please try again in 1-2 minutes. Your free trial was **not** consumed.",
+        "aucun_modele": "❌ No Gemini model available for your API key. Check your secrets.",
     },
     "Espagnol 🇪🇸": {
-        "promo": "🎁 Tu 1ª ficha 100% Gratis · Luego 4,90 € por ficha",
-        "titre": "🛍️ Generador de Fichas de Producto",
-        "sous_titre": "Fichas optimizadas para SEO en 30 segundos, listas para publicar.",
-        "metric_fiches": "📝 Fichas generadas (sesión)",
-        "metric_status": "🚀 Estado",
-        "metric_status_val": "Nuevo",
+        "promo": "🎁 ¡Tu 1ª ficha 100% Gratis · Oferta flash: 5 fichas por el precio de 4!",
+        "titre": "🛍️ Ficha de Producto",
+        "sous_titre": "Genera fichas de productos profesionales en 30 segundos",
+        "metric_fiches": "📝 Tus Fichas Generadas",
+        "metric_users": "👥 Usuarios Activos",
         "metric_prix": "💰 Precio por ficha",
-        "metric_prix_val": "4,90 €",
         "etape1": "🔑 Paso 1: Introduce tu correo electrónico",
         "label_email": "Tu correo para activar o seguir tus fichas *",
         "email_placeholder": "ejemplo@dominio.com",
@@ -342,34 +289,34 @@ TEXTES = {
         "nom_produit": "Nombre del producto *",
         "nom_produit_ph": "Ej: Bolso de cuero",
         "caracs": "Características *",
-        "caracs_ph": "Ej: Cuero genuino, negro, 30x20cm",
-        "langue_fiche": "🌐 Idioma (interfaz + ficha)",
+        "caracs_ph": "Ej: Cuero genuino, negro",
+        "langue_fiche": "📝 Idioma de la ficha",
         "ton": "Tono editorial",
         "longueur": "Longitud de la ficha",
         "options_ton": ["Profesional", "Lujo", "Cálido", "Minimalista"],
         "options_longueur": ["Corta", "Media", "Detallada"],
-        "options_langue": ["Francés 🇫🇷", "Inglés 🇬🇧", "Español 🇪🇸", "Alemán 🇩🇪", "Italiano 🇮🇹", "Árabe 🇸🇦"],
+        "options_langue_fiche": ["Francés 🇫🇷", "Inglés 🇬🇧", "Español 🇪🇸", "Alemán 🇩🇪", "Italiano 🇮🇹", "Árabe 🇸🇦"],
         "options": "⚙️ Opciones avanzadas",
         "mots_cles": "Palabras clave SEO",
-        "mots_cles_ph": "Ej: bolso cuero duradero",
-        "btn_gratuit": "🚀 Generar mi ficha gratis (1ª ofrecida)",
-        "btn_payant": "💳 Pagar 4,90 € y generar mi ficha",
-        "essai_ok": "🎉 ¡Buenas noticias: tu **1ª ficha es gratis**!",
-        "essai_utilise": "ℹ️ Prueba ya usada. Próxima ficha: **4,90 €**.",
+        "mots_cles_ph": "Ej: bolso duradero",
+        "btn_gratuit": "🚀 Generar mi ficha gratis (Prueba gratis)",
+        "btn_payant": "💳 Pagar y generar mi ficha (0,99 €)",
+        "essai_ok": "🎉 ¡Buenas noticias! Tienes una **prueba gratuita (1 ficha)**.",
+        "essai_utilise": "ℹ️ Prueba ya usada. Próximas fichas: **0,99 €**.",
         "email_invalide": "❌ Por favor introduce un correo válido.",
         "genere_ok": "✨ ¡Tu ficha se ha generado con éxito!",
         "genere_spinner": "🤖 Generando...",
         "resultat": "✨ Tu ficha de producto generada:",
-        "historique": "📋 Tus fichas generadas (sesión)",
+        "historique": "📋 Tus fichas generadas",
         "remplir_champs": "⚠️ Por favor rellena el nombre y las características.",
         "paiement_titre": "💳 ¡Pago seguro listo!",
-        "paiement_bouton": "🔒 Pagar ahora 4,90 € en Stripe",
+        "paiement_bouton": "🔒 Pagar ahora 0,99 € en Stripe",
         "paiement_info": "Pago 100% seguro por Stripe.",
         "paiement_erreur": "❌ Error de Stripe:",
         "paiement_ok": "🎉 ¡Pago confirmado! Completa el formulario para generar tu ficha.",
         "pdf_bouton": "📄 Descargar PDF",
-        "surcharge": "⏳ Servicio sobrecargado. Inténtalo en 1-2 min. Tu prueba **no** se ha consumido.",
-        "aucun_modele": "❌ Ningún modelo Gemini disponible. Verifica tus secretos.",
+        "surcharge": "⏳ El servicio está temporalmente sobrecargado. Inténtalo de nuevo en 1-2 minutos. Tu prueba gratuita **no** se ha consumido.",
+        "aucun_modele": "❌ Ningún modelo Gemini disponible para tu clave API. Verifica tus secretos.",
     },
 }
 
@@ -380,7 +327,26 @@ LOCALES_STRIPE = {
 }
 
 # ============================================
-# 🤖 AUTO-DÉCOUVERTE DES MODÈLES GEMINI
+# SECRETS & API
+# ============================================
+try:
+    STRIPE_SECRET_KEY = st.secrets["STRIPE_SECRET_KEY"]
+    STRIPE_PRICE_ID = st.secrets["STRIPE_PRICE_ID"]
+    MON_URL_STREAMLIT = st.secrets["MON_URL_STREAMLIT"]
+    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+    stripe.api_key = STRIPE_SECRET_KEY
+except KeyError as e:
+    st.error(f"❌ Secret manquant : {e}")
+    st.stop()
+
+try:
+    client = genai.Client(api_key=GEMINI_API_KEY)
+except Exception as e:
+    st.error(f"❌ Erreur API Gemini : {e}")
+    st.stop()
+
+# ============================================
+# 🤖 AUTO-DÉCOUVERTE DES MODÈLES DISPONIBLES
 # ============================================
 @st.cache_resource(show_spinner=False)
 def obtenir_modeles_disponibles():
@@ -394,7 +360,8 @@ def obtenir_modeles_disponibles():
             )
             methods_str = [str(x) for x in methods]
             if any("generateContent" in s for s in methods_str):
-                noms.append(m.name.replace("models/", ""))
+                nom_propre = m.name.replace("models/", "")
+                noms.append(nom_propre)
 
         if not noms:
             return []
@@ -408,43 +375,37 @@ def obtenir_modeles_disponibles():
                 "1.5" not in x,
                 x,
             )
+
         noms.sort(key=cle_tri)
         return noms
+
     except Exception as e:
         st.warning(f"⚠️ Impossible de lister les modèles : {e}")
         return []
 
 # ============================================
-# 👥 UTILISATEURS (SUPABASE — PERSISTANT)
+# UTILISATEURS (fichier JSON local)
 # ============================================
+DB_FILE = "utilisateurs.json"
+
+def charger_utilisateurs():
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def enregistrer_utilisateur(email, a_utilise_essai=True):
+    utilisateurs = charger_utilisateurs()
+    utilisateurs[email] = {
+        "a_utilise_essai": a_utilise_essai,
+        "date_inscription": datetime.now().isoformat()
+    }
+    with open(DB_FILE, "w") as f:
+        json.dump(utilisateurs, f)
+
 def valider_email(email):
     regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(regex, email) is not None
-
-def a_deja_utilise_essai(email):
-    try:
-        res = supabase.table("utilisateurs").select("email").eq("email", email).execute()
-        return len(res.data) > 0
-    except Exception as e:
-        st.error(f"❌ Erreur Supabase (lecture) : {e}")
-        return True  # En cas d'erreur, on refuse l'essai (sécurité)
-
-def a_deja_paye(email):
-    try:
-        res = supabase.table("paiements").select("id").eq("email", email).limit(1).execute()
-        return len(res.data) > 0
-    except Exception as e:
-        st.error(f"❌ Erreur Supabase (paiements) : {e}")
-        return False
-
-def enregistrer_essai(email):
-    try:
-        supabase.table("utilisateurs").insert({
-            "email": email,
-            "a_utilise_essai": True,
-        }).execute()
-    except Exception as e:
-        st.warning(f"⚠️ Impossible d'enregistrer l'essai : {e}")
 
 # ============================================
 # STATE
@@ -457,13 +418,15 @@ if "current_result" not in st.session_state:
     st.session_state.current_result = None
 if "current_nom_produit" not in st.session_state:
     st.session_state.current_nom_produit = ""
+if "user_count" not in st.session_state:
+    st.session_state.user_count = 847
 if "payment_url" not in st.session_state:
     st.session_state.payment_url = None
 if "cache_fiche" not in st.session_state:
     st.session_state.cache_fiche = {}
 
 # ============================================
-# 🤖 GÉNÉRATION IA
+# 🤖 GÉNÉRATION IA (PROMPT ARABE DÉDIÉ + RETRY)
 # ============================================
 def generer_fiche_ia(nom, caracteristiques, ton, longueur, mots_cles, langue):
     est_arabe = any(x in langue for x in ["Arabe", "Arabic", "Árabe", "🇸🇦"])
@@ -536,12 +499,15 @@ Traduis TOUS les titres de sections dans cette langue.
 """
 
     modeles = obtenir_modeles_disponibles()
-    if not modeles:
-        return "❌ Erreur : aucun modèle Gemini disponible."
 
+    if not modeles:
+        return "❌ Erreur : aucun modèle Gemini disponible pour votre clé API."
+
+    modeles_a_tester = modeles[:5]
     derniere_erreur = None
-    for mod in modeles[:5]:
-        for _ in range(2):
+
+    for mod in modeles_a_tester:
+        for tentative in range(2):
             try:
                 response = client.models.generate_content(model=mod, contents=prompt)
                 if response and response.text:
@@ -557,17 +523,20 @@ Traduis TOUS les titres de sections dans cette langue.
     return f"❌ Erreur : {derniere_erreur}"
 
 # ============================================
-# 📄 PDF
+# 📄 GÉNÉRATION PDF AVEC WEASYPRINT (RTL NATIF + POLICE EMBARQUÉE)
 # ============================================
 @st.cache_resource(show_spinner=False)
 def _charger_police_base64():
+    """Charge la police arabe en base64 pour l'intégrer dans le HTML."""
     try:
         with open("NotoNaskhArabic-Regular.ttf", "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
     except Exception:
         return None
 
+
 def _nettoyer_espaces_arabe(texte):
+    """Corrige les espaces parasites avant les accents arabes."""
     remplacements = {
         " ً": "ً", " ٍ": "ٍ", " ٌ": "ٌ",
         " َ": "َ", " ِ": "ِ", " ُ": "ُ",
@@ -577,13 +546,17 @@ def _nettoyer_espaces_arabe(texte):
         texte = texte.replace(k, v)
     return texte
 
+
 def _markdown_vers_html(contenu, est_arabe=False):
+    """Convertit une fiche Markdown simple en HTML structuré."""
     lignes_html = []
     for ligne in contenu.split("\n"):
         l = ligne.rstrip()
+
         if not l.strip():
             lignes_html.append("<br>")
             continue
+
         if est_arabe:
             l = _nettoyer_espaces_arabe(l)
 
@@ -595,19 +568,26 @@ def _markdown_vers_html(contenu, est_arabe=False):
             lignes_html.append(f"<h1>{l[2:]}</h1>")
         elif l.lstrip().startswith(("- ", "* ")):
             texte_puce = l.lstrip()[2:]
-            cls = "puce-ar" if est_arabe else "puce"
-            lignes_html.append(f'<p class="{cls}">• {texte_puce}</p>')
+            if est_arabe:
+                lignes_html.append(f'<p class="puce-ar">• {texte_puce}</p>')
+            else:
+                lignes_html.append(f'<p class="puce">• {texte_puce}</p>')
         else:
             lignes_html.append(f"<p>{l}</p>")
+
     return "\n".join(lignes_html)
+
 
 def generer_pdf(contenu, nom_produit, langue="Français 🇫🇷"):
     est_arabe = any(x in langue for x in ["Arabe", "Arabic", "Árabe", "🇸🇦"])
+
     corps_html = _markdown_vers_html(contenu, est_arabe=est_arabe)
+
     direction = "rtl" if est_arabe else "ltr"
     align = "right" if est_arabe else "left"
     titre_section = "بطاقة المنتج" if est_arabe else "Fiche Produit"
 
+    # Police embarquée en base64
     police_b64 = _charger_police_base64()
     font_face = ""
     if police_b64:
@@ -623,42 +603,88 @@ def generer_pdf(contenu, nom_produit, langue="Français 🇫🇷"):
 
     html = f"""
     <!DOCTYPE html>
-    <html><head><meta charset="utf-8"><style>
-        {font_face}
-        @page {{ margin: 2cm; size: A4; }}
-        body {{ font-family: {police_css}; direction: {direction}; text-align: {align};
-                font-size: 12pt; line-height: 1.8; color: #333; }}
-        h1 {{ font-size: 20pt; color: #4c1d95; margin: 0 0 8px 0; }}
-        h2 {{ font-size: 16pt; color: #6b21a8; margin: 22px 0 10px 0;
-              border-bottom: 1px solid #e9d5ff; padding-bottom: 4px; }}
-        h3 {{ font-size: 14pt; color: #7c3aed; margin: 16px 0 8px 0; }}
-        p {{ margin: 8px 0; }}
-        .puce-ar {{ padding-right: 25px; text-indent: -15px; margin: 5px 0; }}
-        .puce {{ padding-left: 25px; text-indent: -15px; margin: 5px 0; }}
-    </style></head>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            {font_face}
+            @page {{
+                margin: 2cm;
+                size: A4;
+            }}
+            body {{
+                font-family: {police_css};
+                direction: {direction};
+                text-align: {align};
+                font-size: 12pt;
+                line-height: 1.8;
+                color: #333333;
+            }}
+            h1 {{
+                font-size: 20pt;
+                color: #4c1d95;
+                margin-bottom: 8px;
+                margin-top: 0;
+            }}
+            h2 {{
+                font-size: 16pt;
+                color: #6b21a8;
+                margin-top: 22px;
+                margin-bottom: 10px;
+                border-bottom: 1px solid #e9d5ff;
+                padding-bottom: 4px;
+            }}
+            h3 {{
+                font-size: 14pt;
+                color: #7c3aed;
+                margin-top: 16px;
+                margin-bottom: 8px;
+            }}
+            p {{
+                margin: 8px 0;
+            }}
+            .puce-ar {{
+                padding-right: 25px;
+                text-indent: -15px;
+                margin: 5px 0;
+            }}
+            .puce {{
+                padding-left: 25px;
+                text-indent: -15px;
+                margin: 5px 0;
+            }}
+        </style>
+    </head>
     <body>
         <h1>{titre_section} — {nom_produit}</h1>
         {corps_html}
-    </body></html>
+    </body>
+    </html>
     """
+
     return HTML(string=html).write_pdf()
 
 # ============================================
-# 🌍 INTERFACE — SÉLECTION UNIQUE DE LANGUE
+# 🌍 INTERFACE
 # ============================================
-# ⚠️ La langue de l'interface EST la langue de la fiche
-langue_choisie = st.selectbox(
-    "🌍 Language / Langue / Idioma",
-    list(TEXTES.keys()),
-    key="langue_unifiee"
-)
-T = TEXTES[langue_choisie]
+st.markdown("## 🌍 Choose your language / Choisissez votre langue / Elige tu idioma")
 
-if st.session_state.paiement_verifie:
+langue_interface = st.selectbox(
+    "Language / Langue / Idioma",
+    list(TEXTES.keys()),
+    key="langue_interface_select"
+)
+
+T = TEXTES[langue_interface]
+
+if query_params.get("payment") == "success":
+    email_retour = query_params.get("email", "")
     st.success(T["paiement_ok"])
+    st.info(f"📧 {email_retour}")
     st.write("---")
 
 st.markdown(f'<div class="promo-badge">{T["promo"]}</div>', unsafe_allow_html=True)
+
 st.title(T["titre"])
 st.subheader(T["sous_titre"])
 
@@ -666,9 +692,9 @@ col_m1, col_m2, col_m3 = st.columns(3)
 with col_m1:
     st.metric(label=T["metric_fiches"], value=st.session_state.generations)
 with col_m2:
-    st.metric(label=T["metric_status"], value=T["metric_status_val"])
+    st.metric(label=T["metric_users"], value=f"{st.session_state.user_count} (+12)")
 with col_m3:
-    st.metric(label=T["metric_prix"], value=T["metric_prix_val"])
+    st.metric(label=T["metric_prix"], value="0,99 €")
 
 st.write("---")
 
@@ -685,20 +711,17 @@ if user_email:
     if not valider_email(user_email):
         st.error(T["email_invalide"])
     else:
-        deja_essai = a_deja_utilise_essai(user_email)
-        deja_paye = a_deja_paye(user_email)
-        paiement_verifie_session = (
-            st.session_state.paiement_verifie
-            and query_params.get("email", "").lower() == user_email
-        )
+        db_utilisateurs = charger_utilisateurs()
+        deja_utilise = user_email in db_utilisateurs and db_utilisateurs[user_email].get("a_utilise_essai", False)
+        email_deja_paye = user_email in st.session_state.emails_payes
 
-        if not deja_essai:
+        if not deja_utilise:
             st.success(T["essai_ok"])
             bouton_texte = T["btn_gratuit"]
             est_payant = False
-        elif deja_paye or paiement_verifie_session:
-            st.success("✅ Client payant — accès illimité à cette fiche")
-            bouton_texte = "✨ Générer ma fiche"
+        elif email_deja_paye:
+            st.success(T["paiement_ok"])
+            bouton_texte = "✨ Générer ma fiche payée"
             est_payant = False
         else:
             st.warning(T["essai_utilise"])
@@ -718,6 +741,7 @@ if user_email:
             caracs = st.text_area(T["caracs"], placeholder=T["caracs_ph"])
 
         with col_form2:
+            langue_choisie = st.selectbox(T["langue_fiche"], T["options_langue_fiche"])
             ton_choisi = st.selectbox(T["ton"], T["options_ton"])
             longueur_choisie = st.selectbox(T["longueur"], T["options_longueur"])
 
@@ -735,18 +759,15 @@ if user_email:
             else:
                 if est_payant:
                     try:
-                        locale_stripe = LOCALES_STRIPE.get(langue_choisie, "auto")
+                        locale_stripe = LOCALES_STRIPE.get(langue_interface, "auto")
                         session_stripe = stripe.checkout.Session.create(
+                         
                             line_items=[{'price': STRIPE_PRICE_ID, 'quantity': 1}],
                             mode='payment',
-                            success_url=(
-                                f"{MON_URL_STREAMLIT}?payment=success"
-                                f"&email={user_email}"
-                                f"&session_id={{CHECKOUT_SESSION_ID}}"
-                            ),
+                            success_url=f"{MON_URL_STREAMLIT}?payment=success&email={user_email}",
                             cancel_url=MON_URL_STREAMLIT,
                             customer_email=user_email,
-                            locale=locale_stripe,
+                            locale=locale_stripe
                         )
                         st.session_state.payment_url = session_stripe.url
                     except Exception as e:
@@ -766,8 +787,8 @@ if user_email:
                                 st.session_state.cache_fiche[cle_cache] = fiche_finale
 
                     if "❌" not in fiche_finale:
-                        if not deja_essai:
-                            enregistrer_essai(user_email)
+                        if not deja_utilise:
+                            enregistrer_utilisateur(user_email, a_utilise_essai=True)
 
                         st.session_state.current_result = fiche_finale
                         st.session_state.current_nom_produit = nom_produit
@@ -776,13 +797,13 @@ if user_email:
                             "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
                             "nom": nom_produit,
                             "langue": langue_choisie,
-                            "contenu": fiche_finale,
+                            "contenu": fiche_finale
                         })
                         st.success(T["genere_ok"])
                     else:
                         if "503" in fiche_finale or "UNAVAILABLE" in fiche_finale:
                             st.warning(T["surcharge"])
-                        elif "404" in fiche_finale or "NOT_FOUND" in fiche_finale:
+                        elif "404" in fiche_finale or "NOT_FOUND" in fiche_finale or "aucun modèle" in fiche_finale.lower():
                             st.error(T["aucun_modele"])
                         else:
                             st.error(fiche_finale)
@@ -799,7 +820,7 @@ if user_email:
                 st.link_button(
                     T["paiement_bouton"],
                     st.session_state.payment_url,
-                    use_container_width=True,
+                    use_container_width=True
                 )
                 bouton_affiche = True
             except (AttributeError, TypeError):
@@ -809,8 +830,9 @@ if user_email:
                 st.markdown(
                     f'<a href="{st.session_state.payment_url}" target="_blank" class="pay-btn">'
                     f'{T["paiement_bouton"]}</a>',
-                    unsafe_allow_html=True,
+                    unsafe_allow_html=True
                 )
+
             st.caption(T["paiement_info"])
 
         # ============================================
@@ -822,30 +844,31 @@ if user_email:
 
             if any(x in langue_choisie for x in ["Arabe", "Arabic", "Árabe", "🇸🇦"]):
                 st.markdown(
-                    f'<div class="result-box" style="direction: rtl; text-align: right;">'
-                    f'{st.session_state.current_result}</div>',
-                    unsafe_allow_html=True,
+                    f'<div class="result-box" style="direction: rtl; text-align: right;">{st.session_state.current_result}</div>',
+                    unsafe_allow_html=True
                 )
             else:
                 st.markdown(
                     f'<div class="result-box">{st.session_state.current_result}</div>',
-                    unsafe_allow_html=True,
+                    unsafe_allow_html=True
                 )
 
             try:
                 pdf_bytes = generer_pdf(
                     st.session_state.current_result,
                     st.session_state.current_nom_produit or "produit",
-                    langue=langue_choisie,
+                    langue=langue_choisie
                 )
+
                 nom_base = st.session_state.current_nom_produit or "produit"
                 nom_fichier = "fiche_" + nom_base.replace(" ", "_") + ".pdf"
+
                 st.download_button(
                     label=T["pdf_bouton"],
                     data=pdf_bytes,
                     file_name=nom_fichier,
                     mime="application/pdf",
-                    use_container_width=True,
+                    use_container_width=True
                 )
             except Exception as e:
                 st.warning(f"PDF indisponible : {e}")
@@ -858,4 +881,4 @@ if user_email:
             st.markdown(f"### {T['historique']}")
             for prod in reversed(st.session_state.generated_products):
                 with st.expander(f"📦 {prod['nom']} ({prod['langue']}) - {prod['date']}"):
-                    st.markdown(prod["contenu"])
+                    st.markdown(prod['contenu'])
