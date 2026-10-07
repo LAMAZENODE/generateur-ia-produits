@@ -33,42 +33,44 @@ if query_params.get("payment") == "success":
         st.session_state.emails_payes.append(email_paye)
 
 # ============================================
-# 🎨 CSS MODERNE — THÈME VIOLET CLAIR
+
+# ============================================
+# 🎨 CSS MODERNE — THÈME VERT
 # ============================================
 st.markdown("""
 <style>
     .stApp {
-        background: linear-gradient(135deg, #c7d2fe 0%, #d8b4fe 50%, #e9d5ff 100%);
+        background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 50%, #bbf7d0 100%);
         background-attachment: fixed;
         min-height: 100vh;
     }
     .main .block-container {
-        background: rgba(255, 255, 255, 0.88);
+        background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(6px);
         border-radius: 20px;
         padding: 2rem;
         margin-top: 1rem;
         margin-bottom: 2rem;
         max-width: 1100px;
-        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.25);
+        box-shadow: 0 20px 60px rgba(16, 185, 129, 0.25);
         border: 1px solid rgba(255, 255, 255, 0.6);
     }
     h1 {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
         font-weight: 800 !important;
     }
     h2, h3 {
-        color: #4c1d95 !important;
+        color: #065f46 !important;
         font-weight: 700 !important;
     }
     .stApp p, .stApp label, .stApp span, .stApp div {
-        color: #3b0764;
+        color: #064e3b;
     }
     .stApp .stCaption, .stApp small {
-        color: #6b21a8 !important;
+        color: #047857 !important;
     }
     .stButton button {
         border-radius: 12px !important;
@@ -76,64 +78,64 @@ st.markdown("""
         font-size: 16px !important;
         font-weight: 700 !important;
         width: 100%;
-        background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%) !important;
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
         color: white !important;
         border: none !important;
-        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.45);
+        box-shadow: 0 4px 15px rgba(5, 150, 105, 0.45);
         transition: all 0.3s ease;
     }
     .stButton button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(124, 58, 237, 0.65);
+        box-shadow: 0 8px 25px rgba(5, 150, 105, 0.65);
     }
     .stLinkButton a {
         display: block !important;
         text-align: center !important;
         padding: 16px !important;
-        background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%) !important;
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
         color: white !important;
         border-radius: 12px !important;
         text-decoration: none !important;
         font-weight: 700 !important;
         width: 100% !important;
-        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.45);
+        box-shadow: 0 4px 15px rgba(5, 150, 105, 0.45);
     }
     .stTextInput input, .stTextArea textarea {
         font-size: 16px !important;
         padding: 12px !important;
         border-radius: 10px !important;
-        border: 2px solid #c4b5fd !important;
+        border: 2px solid #a7f3d0 !important;
         background: #ffffff !important;
-        color: #3b0764 !important;
+        color: #064e3b !important;
     }
     .stTextInput input:focus, .stTextArea textarea:focus {
-        border-color: #7c3aed !important;
-        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2) !important;
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
     }
     .stSelectbox div[data-baseweb="select"] > div {
         background: #ffffff !important;
         border-radius: 10px !important;
-        border: 2px solid #c4b5fd !important;
-        color: #3b0764 !important;
+        border: 2px solid #a7f3d0 !important;
+        color: #064e3b !important;
     }
     .stMetric {
         background: rgba(255, 255, 255, 0.9);
         padding: 20px 15px;
         border-radius: 15px;
         text-align: center;
-        border: 1px solid #c4b5fd;
-        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.15);
+        border: 1px solid #a7f3d0;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);
     }
     .stMetric label {
-        color: #6b21a8 !important;
+        color: #047857 !important;
         font-weight: 600 !important;
     }
     .stMetric [data-testid="stMetricValue"] {
-        color: #3b0764 !important;
+        color: #064e3b !important;
         font-weight: 800 !important;
     }
     .promo-badge {
-        background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
         color: white;
         padding: 16px 20px;
         border-radius: 12px;
@@ -141,23 +143,23 @@ st.markdown("""
         font-weight: 700;
         margin-bottom: 25px;
         font-size: 16px;
-        box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
     }
     .result-box {
         background: rgba(255, 255, 255, 0.95);
         padding: 25px;
         border-radius: 15px;
-        border-left: 5px solid #7c3aed;
+        border-left: 5px solid #10b981;
         margin-top: 20px;
         white-space: pre-line;
-        color: #3b0764;
-        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.15);
+        color: #064e3b;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);
     }
     .payment-box {
         background: rgba(255, 255, 255, 0.95);
         padding: 25px;
         border-radius: 15px;
-        border: 2px solid #7c3aed;
+        border: 2px solid #10b981;
         margin-top: 20px;
         text-align: center;
     }
@@ -165,7 +167,7 @@ st.markdown("""
         display: block;
         text-align: center;
         padding: 16px;
-        background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
         color: white !important;
         border-radius: 12px;
         text-decoration: none;
